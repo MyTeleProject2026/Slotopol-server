@@ -1,7 +1,12 @@
 package cfg
 
 import (
+	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/spf13/viper"
+	"xorm.io/xorm"
 )
 
 var (
@@ -16,6 +21,13 @@ var (
 
 // Default master RTP if no others found.
 const DefMRTP = 95.0
+
+// Program paths.
+var (
+	ExePath string
+	CfgPath string
+	SqlPath string
+)
 
 type CfgJwtAuth struct {
 	AccessTTL    time.Duration `json:"access-ttl" yaml:"access-ttl" mapstructure:"access-ttl"`
@@ -37,60 +49,47 @@ type CfgSendCode struct {
 	CodeTimeout        time.Duration `json:"code-timeout" yaml:"code-timeout" mapstructure:"code-timeout"`
 }
 
-// CfgWebServ is web server settings.
 type CfgWebServ struct {
-	// List of network origins (IPv4 addresses, IPv4 CIDRs, IPv6 addresses or IPv6 CIDRs) from which to trust request's headers that contain alternative client IP when `(*gin.Engine).ForwardedByClientIP` is `true`.
-	TrustedProxies []string `json:"trusted-proxies" yaml:"trusted-proxies" mapstructure:"trusted-proxies"`
-	// List of address:port values for non-encrypted connections. Address is skipped in most common cases, port only remains.
-	PortHTTP []string `json:"port-http" yaml:"port-http" mapstructure:"port-http"`
-	// Maximum duration for reading the entire request, including the body.
-	ReadTimeout time.Duration `json:"read-timeout" yaml:"read-timeout" mapstructure:"read-timeout"`
-	// Amount of time allowed to read request headers.
+	TrustedProxies    []string      `json:"trusted-proxies" yaml:"trusted-proxies" mapstructure:"trusted-proxies"`
+	PortHTTP          []string      `json:"port-http" yaml:"port-http" mapstructure:"port-http"`
+	ReadTimeout       time.Duration `json:"read-timeout" yaml:"read-timeout" mapstructure:"read-timeout"`
 	ReadHeaderTimeout time.Duration `json:"read-header-timeout" yaml:"read-header-timeout" mapstructure:"read-header-timeout"`
-	// Maximum duration before timing out writes of the response.
-	WriteTimeout time.Duration `json:"write-timeout" yaml:"write-timeout" mapstructure:"write-timeout"`
-	// Maximum amount of time to wait for the next request when keep-alives are enabled.
-	IdleTimeout time.Duration `json:"idle-timeout" yaml:"idle-timeout" mapstructure:"idle-timeout"`
-	// Controls the maximum number of bytes the server will read parsing the request header's keys and values, including the request line, in bytes.
-	MaxHeaderBytes int `json:"max-header-bytes" yaml:"max-header-bytes" mapstructure:"max-header-bytes"`
-	// Maximum duration to wait for graceful shutdown.
-	ShutdownTimeout time.Duration `json:"shutdown-timeout" yaml:"shutdown-timeout" mapstructure:"shutdown-timeout"`
+	WriteTimeout      time.Duration `json:"write-timeout" yaml:"write-timeout" mapstructure:"write-timeout"`
+	IdleTimeout       time.Duration `json:"idle-timeout" yaml:"idle-timeout" mapstructure:"idle-timeout"`
+	MaxHeaderBytes    int           `json:"max-header-bytes" yaml:"max-header-bytes" mapstructure:"max-header-bytes"`
+	ShutdownTimeout   time.Duration `json:"shutdown-timeout" yaml:"shutdown-timeout" mapstructure:"shutdown-timeout"`
 }
 
 type CfgXormDrv struct {
-	// Provides driver name to create XORM engine.
-	// It can be "sqlite3" or "mysql".
-	DriverName string `json:"driver-name" yaml:"driver-name" mapstructure:"driver-name"`
-	// Determines whether to write information about users spins to the log.
-	UseSpinLog bool `json:"use-spin-log" yaml:"use-spin-log" mapstructure:"use-spin-log"`
-	// Data source name for 'club' database to create XORM engine.
-	// For sqlite3 it should be database file name (slot-club.sqlite),
-	// for mysql it should match to pattern user:password@/slot_club.
-	ClubSourceName string `json:"club-source-name" yaml:"club-source-name" mapstructure:"club-source-name"`
-	// Data source name for 'spin' database to create XORM engine.
-	// For sqlite3 it should be database file name (slot-spin.sqlite),
-	// for mysql it should match to pattern user:password@/slot_spin.
-	SpinSourceName string `json:"spin-source-name" yaml:"spin-source-name" mapstructure:"spin-source-name"`
-	// Duration between flushes of SQL batching buffers.
-	SqlFlushTick time.Duration `json:"sql-flush-tick" yaml:"sql-flush-tick" mapstructure:"sql-flush-tick"`
-	// Maximum size of buffer to group items to update across API-endpoints calls
-	// at club database. If it is 1, update will be sequential with error code expecting.
-	ClubUpdateBuffer int `json:"club-update-buffer" yaml:"club-update-buffer" mapstructure:"club-update-buffer"`
-	// Maximum size of buffer to insert new items grouped across
-	// API-endpoints calls at club database.
-	ClubInsertBuffer int `json:"club-insert-buffer" yaml:"club-insert-buffer" mapstructure:"club-insert-buffer"`
-	// Maximum size of buffer to insert new items grouped across
-	// API-endpoints calls at spin database.
-	SpinInsertBuffer int `json:"spin-insert-buffer" yaml:"spin-insert-buffer" mapstructure:"spin-insert-buffer"`
+	DriverName       string        `json:"driver-name" yaml:"driver-name" mapstructure:"driver-name"`
+	UseSpinLog       bool          `json:"use-spin-log" yaml:"use-spin-log" mapstructure:"use-spin-log"`
+	ClubSourceName   string        `json:"club-source-name" yaml:"club-source-name" mapstructure:"club-source-name"`
+	SpinSourceName   string        `json:"spin-source-name" yaml:"spin-source-name" mapstructure:"spin-source-name"`
+	SqlFlushTick     time.Duration `json:"sql-flush-tick" yaml:"sql-flush-tick" mapstructure:"sql-flush-tick"`
+	ClubUpdateBuffer int           `json:"club-update-buffer" yaml:"club-update-buffer" mapstructure:"club-update-buffer"`
+	ClubInsertBuffer int           `json:"club-insert-buffer" yaml:"club-insert-buffer" mapstructure:"club-insert-buffer"`
+	SpinInsertBuffer int           `json:"spin-insert-buffer" yaml:"spin-insert-buffer" mapstructure:"spin-insert-buffer"`
 }
 
 type CfgGameplay struct {
-	// Maximum value to add to wallet by one transaction.
-	AdjunctLimit float64 `json:"adjunct-limit" yaml:"adjunct-limit" mapstructure:"adjunct-limit"`
-	// Jackpot fund minimum. If spin gets jackpot with less value, that spin will be skipped.
-	MinJackpot float64 `json:"min-jackpot" yaml:"min-jackpot" mapstructure:"min-jackpot"`
-	// Maximum number of spin attempts at bad bank balance.
-	MaxSpinAttempts int `json:"max-spin-attempts" yaml:"max-spin-attempts" mapstructure:"max-spin-attempts"`
+	AdjunctLimit    float64 `json:"adjunct-limit" yaml:"adjunct-limit" mapstructure:"adjunct-limit"`
+	MinJackpot      float64 `json:"min-jackpot" yaml:"min-jackpot" mapstructure:"min-jackpot"`
+	MaxSpinAttempts int     `json:"max-spin-attempts" yaml:"max-spin-attempts" mapstructure:"max-spin-attempts"`
+}
+
+// Cloudinary configuration
+type CfgCloudinary struct {
+	CloudName    string `json:"cloud_name" yaml:"cloud_name" mapstructure:"cloud_name"`
+	APIKey       string `json:"api_key" yaml:"api_key" mapstructure:"api_key"`
+	APISecret    string `json:"api_secret" yaml:"api_secret" mapstructure:"api_secret"`
+	UploadFolder string `json:"upload_folder" yaml:"upload_folder" mapstructure:"upload_folder"`
+}
+
+// Uploads configuration
+type CfgUploads struct {
+	AllowedTypes []string `json:"allowed_types" yaml:"allowed_types" mapstructure:"allowed_types"`
+	MaxFileSize  int64    `json:"max_file_size" yaml:"max_file_size" mapstructure:"max_file_size"`
+	Storage      string   `json:"storage" yaml:"storage" mapstructure:"storage"`
 }
 
 // Config is common service settings.
@@ -99,26 +98,31 @@ type Config struct {
 	CfgSendCode `json:"activation" yaml:"activation" mapstructure:"activation"`
 	CfgWebServ  `json:"web-server" yaml:"web-server" mapstructure:"web-server"`
 	CfgXormDrv  `json:"database" yaml:"database" mapstructure:"database"`
-	CfgGameplay `json:"gameplay" yaml:"xorm" mapstructure:"gameplay"`
+	CfgGameplay `json:"gameplay" yaml:"gameplay" mapstructure:"gameplay"`
+
+	// NEW: Cloudinary
+	Cloudinary CfgCloudinary `json:"cloudinary" yaml:"cloudinary" mapstructure:"cloudinary"`
+
+	// NEW: Uploads
+	Uploads CfgUploads `json:"uploads" yaml:"uploads" mapstructure:"uploads"`
 }
 
-// Instance of common service settings.
-// Inits default values if config is not found.
+// Instance of common service settings with defaults.
 var Cfg = &Config{
 	CfgJwtAuth: CfgJwtAuth{
-		AccessTTL:    1 * 24 * time.Hour,
-		RefreshTTL:   3 * 24 * time.Hour,
+		AccessTTL:    24 * time.Hour,
+		RefreshTTL:   72 * time.Hour,
 		AccessKey:    "skJgM4NsbP3fs4k7vh0gfdkgGl8dJTszdLxZ1sQ9ksFnxbgvw2RsGH8xxddUV479",
 		RefreshKey:   "zxK4dUnuq3Lhd1Gzhpr3usI5lAzgvy2t3fmxld2spzz7a5nfv0hsksm9cheyutie",
 		NonceTimeout: 150 * time.Second,
 	},
 	CfgSendCode: CfgSendCode{
 		UseActivation:      false,
-		BrevoApiKey:        "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",
+		BrevoApiKey:        "",
 		BrevoEmailEndpoint: "https://api.brevo.com/v3/smtp/email",
 		SenderName:         "Slotopol server",
-		SenderEmail:        "slotopol.dev@gmail.com",
-		ReplytoEmail:       "noreply@gmail.com",
+		SenderEmail:        "noreply@slotopol.com",
+		ReplytoEmail:       "noreply@slotopol.com",
 		EmailSubject:       "Slotopol verification code",
 		EmailHtmlContent:   "<html><head></head><body><p>Your Slotopol verification code is: <b>%06d</b></p></body></html>",
 		CodeTimeout:        15 * time.Minute,
@@ -136,16 +140,74 @@ var Cfg = &Config{
 	CfgXormDrv: CfgXormDrv{
 		DriverName:       "sqlite3",
 		UseSpinLog:       true,
-		ClubSourceName:   ":memory:",
-		SpinSourceName:   ":memory:",
+		ClubSourceName:   "slot-club.sqlite",
+		SpinSourceName:   "slot-spin.sqlite",
 		SqlFlushTick:     2500 * time.Millisecond,
-		ClubUpdateBuffer: 1,
-		ClubInsertBuffer: 1,
-		SpinInsertBuffer: 1,
+		ClubUpdateBuffer: 200,
+		ClubInsertBuffer: 150,
+		SpinInsertBuffer: 250,
 	},
 	CfgGameplay: CfgGameplay{
 		AdjunctLimit:    100000,
 		MinJackpot:      10000,
 		MaxSpinAttempts: 300,
 	},
+	Cloudinary: CfgCloudinary{
+		CloudName:    "",
+		APIKey:       "",
+		APISecret:    "",
+		UploadFolder: "slotopol",
+	},
+	Uploads: CfgUploads{
+		AllowedTypes: []string{
+			"image/jpeg",
+			"image/png",
+			"image/webp",
+			"image/gif",
+			"image/svg+xml",
+		},
+		MaxFileSize: 5 * 1024 * 1024, // 5MB
+		Storage:     "cloudinary",
+	},
+}
+
+// LoadConfig reads configuration from YAML file.
+func LoadConfig(path string) error {
+	v := viper.New()
+	v.SetConfigFile(path)
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("SLOTOPOL")
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(nil)
+
+	if err := v.ReadInConfig(); err != nil {
+		return err
+	}
+
+	if err := v.Unmarshal(Cfg); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetClubDB returns a xorm engine for club database.
+func (cfg *Config) GetClubDB() (*xorm.Engine, error) {
+	return xorm.NewEngine(cfg.DriverName, cfg.ClubSourceName)
+}
+
+// GetSpinDB returns a xorm engine for spin database.
+func (cfg *Config) GetSpinDB() (*xorm.Engine, error) {
+	return xorm.NewEngine(cfg.DriverName, cfg.SpinSourceName)
+}
+
+func init() {
+	var err error
+	if ExePath, err = os.Executable(); err != nil {
+		panic(err)
+	}
+	ExePath = filepath.Dir(ExePath)
+
+	if CfgPath, err = filepath.Abs("."); err != nil {
+		panic(err)
+	}
 }
