@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"xorm.io/xorm"
 
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 )
 
 type Session = xorm.Session
