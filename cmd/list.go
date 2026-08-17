@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 	"github.com/slotopol/server/game"
 
 	"github.com/spf13/cobra"
