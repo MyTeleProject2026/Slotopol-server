@@ -1,35 +1,65 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# ============================================================
+# Slotopol Server - .gitignore
+# ============================================================
+
+# Binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+slotopol-server
+slot_*
+slot-debug
 
-# Test binary, built with `go test -c`
+# Test binary
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Coverage
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
-go.work
-go.work.sum
-
-# env file
+# Environment variables
 .env
+.env.local
+.env.*.local
 
-# Visual Studio settings
-.vs/
-
-# Visual Studio Code settings
+# IDE / Editor
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Uploads directory (local file storage)
+uploads/
+cloudinary-sync/
 
 # Temporary development files
 reeldev.yaml
 TODO
+*.tmp
+*.log
+logs/
+
+# Docker files (ignore local docker-compose overrides)
+docker-compose.override.yml
+*.pid
+
+# Go workspace
+go.work
+go.work.sum
+
+# Vendor (if used)
+vendor/
+
+# Build output
+dist/
+bin/
+out/
