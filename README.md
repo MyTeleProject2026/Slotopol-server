@@ -1,4 +1,3 @@
-```markdown
 # Slots server with Cloudinary
 
 [![GitHub release][1]][2]
@@ -470,5 +469,3 @@ A full list is available in the .env.example file.
 ---
 
 (c) schwarzlichtbezirk, 2024-2026.
-
-```
