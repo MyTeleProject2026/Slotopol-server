@@ -35,7 +35,7 @@ INSERT INTO `props` (`cid`, `uid`, `wallet`, `access`, `mrtp`) VALUES
 (2, 3, 0, 0, 98);
 
 -- ============================================================
--- Cloudinary Image Metadata Table
+-- Cloudinary Image Metadata Table (NEW)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS `cloudinary_images` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `cloudinary_images` (
 );
 
 -- ============================================================
--- Game Images Table (linking games to Cloudinary images)
+-- Game Images Table (NEW)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS `game_images` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
