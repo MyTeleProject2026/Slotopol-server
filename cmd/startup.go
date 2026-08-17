@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/slotopol/server/api"
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 	"github.com/slotopol/server/game"
 	"github.com/slotopol/server/util"
 
