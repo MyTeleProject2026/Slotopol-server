@@ -16,27 +16,66 @@ services:
         aliases:
           - slotopolhost
     environment:
-      SLOTOPOL_DBDRIVER: mysql
-      SLOTOPOL_CLUBDSN: admin:jB44t78dHv@tcp(mysqlhost:3306)/slotopol
-      SLOTOPOL_SPINDSN: admin:jB44t78dHv@tcp(mysqlhost:3306)/slotopol
+      # Database configuration
+      SLOTOPOL_DBDRIVER: ${DB_DRIVER:-mysql}
+      SLOTOPOL_CLUBDSN: ${DB_USER:-admin}:${DB_PASSWORD:-jB44t78dHv}@tcp(${DB_HOST:-mysqlhost}:${DB_PORT:-3306})/${DB_NAME:-slotopol}
+      SLOTOPOL_SPINDSN: ${DB_USER:-admin}:${DB_PASSWORD:-jB44t78dHv}@tcp(${DB_HOST:-mysqlhost}:${DB_PORT:-3306})/${DB_NAME:-slotopol}
+      
+      # Cloudinary configuration
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-slotopol/games}
+      
+      # JWT Configuration
+      ACCESS_KEY: ${ACCESS_KEY:-skJgM4NsbP3fs4k7vh0gfdkgGl8dJTszdLxZ1sQ9ksFnxbgvw2RsGH8xxddUV479}
+      REFRESH_KEY: ${REFRESH_KEY:-zxK4dUnuq3Lhd1Gzhpr3usI5lAzgvy2t3fmxld2spzz7a5nfv0hsksm9cheyutie}
+      
+      # Server configuration
+      ACCESS_TTL: ${ACCESS_TTL:-24h}
+      REFRESH_TTL: ${REFRESH_TTL:-72h}
     restart: unless-stopped
     stop_signal: SIGINT
     stop_grace_period: 15s
+    volumes:
+      - ./appdata:/appdata
+      - ./uploads:/uploads
 
   database:
     image: mysql:8.0-debian
     container_name: slotopol-db
     ports:
-      - 3306:3306
+      - ${DB_PORT_EXTERNAL:-3306}:3306
     networks:
       slotopol-net:
         aliases:
           - mysqlhost
     environment:
-      MYSQL_ROOT_PASSWORD: dg8FxCm1hh
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: jB44t78dHv
-      MYSQL_DATABASE: slotopol
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-dg8FxCm1hh}
+      MYSQL_USER: ${DB_USER:-admin}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-jB44t78dHv}
+      MYSQL_DATABASE: ${DB_NAME:-slotopol}
+    volumes:
+      - slotopol_db_data:/var/lib/mysql
+      - ./appdata/slot-clubinit.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  # Optional: Cloudinary Upload Service for images
+  cloudinary-uploader:
+    image: node:18-alpine
+    container_name: slotopol-cloudinary
+    depends_on:
+      - slotopol
+    environment:
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-slotopol}
+    volumes:
+      - ./uploads:/uploads
+      - ./cloudinary-sync:/app
+    command: sh -c "while true; do sleep 3600; done"
+    restart: unless-stopped
 
 networks:
   slotopol-net:
@@ -44,3 +83,6 @@ networks:
     external: false
     ipam:
       driver: default
+
+volumes:
+  slotopol_db_data:
