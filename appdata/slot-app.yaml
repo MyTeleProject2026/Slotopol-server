@@ -3,22 +3,15 @@
 # ============================================================
 
 authentication:
-  # Access token time to live.
-  access-ttl: ${ACCESS_TTL:-24h}
-  # Refresh token time to live.
-  refresh-ttl: ${REFRESH_TTL:-72h}
-  # Key for access HS-256 JWT-tokens.
-  access-key: ${ACCESS_KEY}
-  # Key for refresh HS-256 JWT-tokens.
-  refresh-key: ${REFRESH_KEY}
-  # Validity timeout of the nonce with which the login hash is signed.
+  access-ttl: ${SLOTOPOL_ACCESS_TTL:-24h}
+  refresh-ttl: ${SLOTOPOL_REFRESH_TTL:-72h}
+  access-key: ${SLOTOPOL_ACCESS_KEY}
+  refresh-key: ${SLOTOPOL_REFRESH_KEY}
   nonce-timeout: 2m30s
 
 activation:
-  # Expects accounts activation by code after accounts registration.
   use-activation: false
-  # Brevo API-key for email verification (optional).
-  brevo-api-key: ${BREVO_API_KEY:-}
+  brevo-api-key: ${SLOTOPOL_BREVO_API_KEY:-}
   brevo-email-endpoint: https://api.brevo.com/v3/smtp/email
   sender-name: Slotopol Server
   sender-email: noreply@slotopol.com
@@ -36,7 +29,7 @@ activation:
 web-server:
   trusted-proxies: 127.0.0.0/8
   port-http:
-  - :${SERVER_PORT:-8080}
+  - :${SLOTOPOL_PORT:-8080}
   read-timeout: 15s
   read-header-timeout: 15s
   write-timeout: 15s
@@ -45,10 +38,10 @@ web-server:
   shutdown-timeout: 15s
 
 database:
-  driver-name: ${DB_DRIVER:-mysql}
+  driver-name: ${SLOTOPOL_DBDRIVER:-mysql}
   use-spin-log: true
-  club-source-name: ${DB_USER:-admin}:${DB_PASSWORD}@tcp(${DB_HOST:-localhost}:${DB_PORT:-3306})/${DB_NAME:-slotopol}
-  spin-source-name: ${DB_USER:-admin}:${DB_PASSWORD}@tcp(${DB_HOST:-localhost}:${DB_PORT:-3306})/${DB_NAME:-slotopol}
+  club-source-name: ${SLOTOPOL_CLUBDSN}
+  spin-source-name: ${SLOTOPOL_SPINDSN}
   sql-flush-tick: 2500ms
   club-update-buffer: 200
   club-insert-buffer: 150
@@ -60,22 +53,16 @@ gameplay:
   max-spin-attempts: 300
 
 # ============================================================
-# Cloudinary Configuration
+# Cloudinary Configuration (NEW)
 # ============================================================
 cloudinary:
-  cloud_name: ${CLOUDINARY_CLOUD_NAME}
-  api_key: ${CLOUDINARY_API_KEY}
-  api_secret: ${CLOUDINARY_API_SECRET}
-  upload_folder: ${CLOUDINARY_UPLOAD_FOLDER:-slotopol}
-  image_optimization:
-    quality: auto
-    fetch_format: auto
-    width: 400
-    height: 300
-    crop: fill
+  cloud_name: ${SLOTOPOL_CLOUDINARY_CLOUD_NAME}
+  api_key: ${SLOTOPOL_CLOUDINARY_API_KEY}
+  api_secret: ${SLOTOPOL_CLOUDINARY_API_SECRET}
+  upload_folder: ${SLOTOPOL_CLOUDINARY_UPLOAD_FOLDER:-slotopol}
 
 # ============================================================
-# Image Upload Configuration
+# Uploads Configuration (NEW)
 # ============================================================
 uploads:
   allowed_types:
@@ -85,4 +72,4 @@ uploads:
     - image/gif
     - image/svg+xml
   max_file_size: 5242880 # 5MB
-  storage: cloudinary # Options: local, cloudinary, both
+  storage: cloudinary # local, cloudinary, both
