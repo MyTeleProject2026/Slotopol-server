@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/slotopol/server/api"
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/gin-gonic/gin"
