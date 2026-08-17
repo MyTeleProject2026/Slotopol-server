@@ -13,7 +13,7 @@ import (
 
 	"github.com/slotopol/server/api"
 	"github.com/slotopol/server/cmd"
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 
 	"github.com/gin-gonic/gin"
 )
