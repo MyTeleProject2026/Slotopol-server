@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 	"github.com/slotopol/server/game/keno"
 	"github.com/slotopol/server/util"
 )
