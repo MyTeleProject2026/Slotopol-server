@@ -5,7 +5,7 @@ import (
 	"log"
 	"runtime"
 
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 	"github.com/slotopol/server/game"
 	"github.com/slotopol/server/util"
 
