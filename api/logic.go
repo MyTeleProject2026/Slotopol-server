@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/atomic"
 
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 	"github.com/slotopol/server/game"
 	"github.com/slotopol/server/util"
 )
