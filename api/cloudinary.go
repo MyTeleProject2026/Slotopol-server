@@ -18,28 +18,28 @@ import (
 
 // CloudinaryImage represents the response from Cloudinary upload
 type CloudinaryImage struct {
-	PublicID   string `json:"public_id"`
-	Version    string `json:"version"`
-	Signature  string `json:"signature"`
-	Width      int    `json:"width"`
-	Height     int    `json:"height"`
-	Format     string `json:"format"`
+	PublicID     string `json:"public_id"`
+	Version      string `json:"version"`
+	Signature    string `json:"signature"`
+	Width        int    `json:"width"`
+	Height       int    `json:"height"`
+	Format       string `json:"format"`
 	ResourceType string `json:"resource_type"`
-	CreatedAt  string `json:"created_at"`
-	Bytes      int64  `json:"bytes"`
-	Type       string `json:"type"`
-	URL        string `json:"url"`
-	SecureURL  string `json:"secure_url"`
-	Etag       string `json:"etag"`
+	CreatedAt    string `json:"created_at"`
+	Bytes        int64  `json:"bytes"`
+	Type         string `json:"type"`
+	URL          string `json:"url"`
+	SecureURL    string `json:"secure_url"`
+	Etag         string `json:"etag"`
 }
 
 // CloudinaryUploadParams holds upload configuration
 type CloudinaryUploadParams struct {
-	File         multipart.File
-	Filename     string
-	PublicID     string
-	Folder       string
-	Tags         []string
+	File          multipart.File
+	Filename      string
+	PublicID      string
+	Folder        string
+	Tags          []string
 	Transformation string
 }
 
@@ -77,7 +77,11 @@ func UploadToCloudinary(params CloudinaryUploadParams) (*CloudinaryImage, error)
 		}
 	}
 	if uploadFolder != "" {
-		if err := w.WriteField("folder", uploadFolder+"/"+params.Folder); err != nil {
+		folder := uploadFolder
+		if params.Folder != "" {
+			folder = uploadFolder + "/" + params.Folder
+		}
+		if err := w.WriteField("folder", folder); err != nil {
 			return nil, err
 		}
 	}
@@ -105,8 +109,6 @@ func UploadToCloudinary(params CloudinaryUploadParams) (*CloudinaryImage, error)
 		return nil, err
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
-
-	// Use Basic Auth for Cloudinary
 	req.SetBasicAuth(apiKey, apiSecret)
 
 	// Execute request
@@ -212,7 +214,6 @@ func ApiUploadImage(c *gin.Context) {
 
 	// Save to database
 	user := c.MustGet(userKey).(*User)
-	var imageID uint64
 	if err := SafeTransaction(cfg.XormStorage, func(session *Session) error {
 		_, err := session.Exec(
 			`INSERT INTO cloudinary_images (public_id, url, secure_url, format, width, height, bytes, uploaded_by, folder, tags)
