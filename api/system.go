@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 	"github.com/slotopol/server/util"
 
 	"github.com/gin-gonic/gin"
