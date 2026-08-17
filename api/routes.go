@@ -200,4 +200,12 @@ func SetupRouter(r *gin.Engine) {
 	rc.POST("/jpfund", ApiClubJpfund)
 	rc.POST("/rename", ApiClubRename)
 	rc.POST("/cashin", ApiClubCashin)
+
+	// ============================================================
+	// Cloudinary group (image storage)
+	// ============================================================
+	var rcloud = ra.Group("/cloudinary")
+	rcloud.POST("/upload", ApiUploadImage)
+	rcloud.GET("/images", ApiGetImages)
+	rcloud.DELETE("/image", ApiDeleteImage)
 }
