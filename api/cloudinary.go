@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	cfg "github.com/slotopol/server/config"
+	"github.com/slotopol/server/config"
 )
 
 // CloudinaryImage represents the response from Cloudinary upload
