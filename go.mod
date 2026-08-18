@@ -1,4 +1,4 @@
-module github.com/slotopol/server
+module github.com/MyTeleProject2026/Slotopol-server
 
 go 1.25.0
 
