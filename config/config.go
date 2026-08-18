@@ -68,7 +68,6 @@ const DefMRTP = 95.0
 var (
 	ExePath string
 	CfgPath string
-	// SqlPath is declared above
 )
 
 type CfgJwtAuth struct {
@@ -215,6 +214,7 @@ var Cfg = &Config{
 
 // LoadConfig reads configuration from YAML file.
 func LoadConfig(path string) error {
+	// Create a new Viper instance
 	v := viper.New()
 	v.SetConfigFile(path)
 	v.SetConfigType("yaml")
@@ -222,13 +222,22 @@ func LoadConfig(path string) error {
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(nil)
 
+	// Check if config file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// File doesn't exist - use defaults
+		return nil
+	}
+
+	// Read the config file
 	if err := v.ReadInConfig(); err != nil {
 		return err
 	}
 
+	// Unmarshal into Cfg
 	if err := v.Unmarshal(Cfg); err != nil {
 		return err
 	}
+
 	return nil
 }
 
