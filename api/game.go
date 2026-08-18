@@ -7,15 +7,16 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/MyTeleProject2026/Slotopol-server/game"
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
+// ApiGameAlgs returns full list of all available algorithms.
 func ApiGameAlgs(c *gin.Context) {
 	RetOk(c, game.AlgList)
 }
 
+// ApiGameList returns list of available games selected by filters.
 func ApiGameList(c *gin.Context) {
 	var err error
 	var arg struct {
@@ -32,7 +33,7 @@ func ApiGameList(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_game_list_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 	if len(arg.Include) == 0 {
@@ -49,7 +50,7 @@ func ApiGameList(c *gin.Context) {
 		flist = nil
 		for _, key := range keys {
 			if f = game.GetFilter(key); f == nil {
-				Ret400(c, AEC_game_list_inc, fmt.Errorf("filter with name '%s' does not recognized", key))
+				Ret400(c, 0, fmt.Errorf("filter with name '%s' does not recognized", key))
 				return
 			}
 			flist = append(flist, f)
@@ -61,7 +62,7 @@ func ApiGameList(c *gin.Context) {
 		flist = nil
 		for _, key := range keys {
 			if f = game.GetFilter(key); f == nil {
-				Ret400(c, AEC_game_list_exc, fmt.Errorf("filter with name '%s' does not recognized", key))
+				Ret400(c, 0, fmt.Errorf("filter with name '%s' does not recognized", key))
 				return
 			}
 		}
@@ -108,6 +109,7 @@ var (
 	JoinBuf = SqlStory{}
 )
 
+// ApiGameNew creates a new instance of game.
 func ApiGameNew(c *gin.Context) {
 	var err error
 	var ok bool
@@ -125,26 +127,26 @@ func ApiGameNew(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_game_join_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok {
-		Ret404(c, AEC_game_new_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_game_new_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if (al&ALmember == 0) || (admin != user && al&ALdealer == 0) {
-		Ret403(c, AEC_game_new_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -152,7 +154,7 @@ func ApiGameNew(c *gin.Context) {
 	var alias = util.ToID(arg.Alias)
 	var maker, has = game.GameFactory[alias]
 	if !has {
-		Ret400(c, AEC_game_new_noalias, ErrNoAliase)
+		Ret400(c, 0, ErrNoAliase)
 		return
 	}
 
@@ -168,10 +170,11 @@ func ApiGameNew(c *gin.Context) {
 		Game: anygame,
 	}
 
+	// Insert new story entry
 	if Cfg.ClubInsertBuffer > 1 {
 		go JoinBuf.Join(XormStorage, &scene.Story)
 	} else if err = JoinBuf.Join(XormStorage, &scene.Story); err != nil {
-		Ret500(c, AEC_game_new_sql, err)
+		Ret500(c, 0, err)
 		return
 	}
 
@@ -184,6 +187,7 @@ func ApiGameNew(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiGameJoin joins an existing game.
 func ApiGameJoin(c *gin.Context) {
 	var err error
 	var ok bool
@@ -201,25 +205,25 @@ func ApiGameJoin(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_game_join_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_game_join_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if (al&ALmember == 0) || (admin != user && al&ALdealer == 0) {
-		Ret403(c, AEC_game_join_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
 	var scene *Scene
 	if scene, err = GetScene(arg.GID); err != nil {
-		Ret404(c, AEC_game_join_noscene, err)
+		Ret404(c, 0, err)
 		return
 	}
 
@@ -230,6 +234,7 @@ func ApiGameJoin(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiGameInfo returns full info of game scene with given GID.
 func ApiGameInfo(c *gin.Context) {
 	var err error
 	var ok bool
@@ -249,31 +254,31 @@ func ApiGameInfo(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_game_info_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var scene *Scene
 	if scene, err = GetScene(arg.GID); err != nil {
-		Ret404(c, AEC_game_info_noscene, err)
+		Ret404(c, 0, err)
 		return
 	}
 
 	var user *User
 	if user, ok = Users.Get(scene.UID); !ok {
-		Ret500(c, AEC_game_info_nouser, ErrNoUser)
+		Ret500(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, scene.CID)
 	if admin != user && al&ALdealer == 0 {
-		Ret403(c, AEC_game_info_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
 	var props *Props
 	if props, ok = user.props.Get(scene.CID); !ok {
-		Ret500(c, AEC_game_info_noprops, ErrNoProps)
+		Ret500(c, 0, ErrNoProps)
 		return
 	}
 
@@ -288,6 +293,7 @@ func ApiGameInfo(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiGameRtpGet returns master RTP for given GID.
 func ApiGameRtpGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -302,37 +308,37 @@ func ApiGameRtpGet(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_game_rtpget_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var scene *Scene
 	if scene, err = GetScene(arg.GID); err != nil {
-		Ret404(c, AEC_game_rtpget_noscene, err)
+		Ret404(c, 0, err)
 		return
 	}
 
 	var gi *game.GameInfo
 	if gi, ok = game.InfoMap[scene.Alias]; !ok {
-		Ret500(c, AEC_game_rtpget_noinfo, ErrNoAliase)
+		Ret500(c, 0, ErrNoAliase)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(scene.CID); !ok {
-		Ret500(c, AEC_game_rtpget_noclub, ErrNoClub)
+		Ret500(c, 0, ErrNoClub)
 		return
 	}
 
 	var user *User
 	if user, ok = Users.Get(scene.UID); !ok {
-		Ret500(c, AEC_game_rtpget_nouser, ErrNoUser)
+		Ret500(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, scene.CID)
 	if admin != user && al&ALdealer == 0 {
-		Ret403(c, AEC_game_rtpget_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
