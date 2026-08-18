@@ -102,7 +102,7 @@ func TestPlay(t *testing.T) {
 	cmd.CheckAlgList()
 
 	// Prepare in-memory database
-	cfg.CfgPath = "../appdata"
+	config.CfgPath = "../appdata"
 	if err := cmd.InitSQL(); err != nil {
 		t.Fatal(err)
 	}
