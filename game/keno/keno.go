@@ -1,10 +1,5 @@
 package keno
 
-import (
-	"github.com/MyTeleProject2026/Slotopol-server/game"
-	"github.com/MyTeleProject2026/Slotopol-server/util"
-)
-
 // Grid represents the 80-number keno board.
 type Grid [80]int
 
