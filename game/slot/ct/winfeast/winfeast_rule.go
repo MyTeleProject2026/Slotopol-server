@@ -3,7 +3,7 @@ package winfeast
 // See: https://www.livebet.com/casino/slots/ct-interactive/win-feast
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

@@ -4,8 +4,8 @@ package lucky3penguins
 // similar: ct/jollybelugawhales, ct/penguinparty
 
 import (
-	"github.com/slotopol/server/game/slot"
-	"github.com/slotopol/server/game/slot/ct/penguinparty"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot/ct/penguinparty"
 )
 
 const (

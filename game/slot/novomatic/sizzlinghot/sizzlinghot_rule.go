@@ -3,7 +3,7 @@ package sizzlinghot
 // See: https://www.slotsmate.com/software/novomatic/sizzling-hot-deluxe
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

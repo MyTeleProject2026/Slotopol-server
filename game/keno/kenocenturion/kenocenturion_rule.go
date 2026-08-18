@@ -1,7 +1,7 @@
 package kenocenturion
 
 import (
-	"github.com/slotopol/server/game/keno"
+	"github.com/MyTeleProject2026/Slotopol-server/game/keno"
 )
 
 // RTP[ 2] = 98.101266%, sigma = 2.330240

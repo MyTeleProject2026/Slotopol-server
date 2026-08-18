@@ -3,7 +3,7 @@ package twomillionbc
 // See: https://www.slotsmate.com/software/betsoft/2-million-bc
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

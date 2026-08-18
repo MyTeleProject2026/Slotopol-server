@@ -3,7 +3,7 @@ package dynastyofra
 // See: https://www.slotsmate.com/software/novomatic/dynasty-of-ra
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

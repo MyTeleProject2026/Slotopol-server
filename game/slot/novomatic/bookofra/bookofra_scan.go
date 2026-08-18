@@ -6,7 +6,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 func CalcStatBon(ctx context.Context, sp *slot.ScanPar, s *slot.StatGeneric, es slot.Sym) (float64, float64) {

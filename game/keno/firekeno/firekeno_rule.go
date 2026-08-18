@@ -1,7 +1,7 @@
 package firekeno
 
 import (
-	"github.com/slotopol/server/game/keno"
+	"github.com/MyTeleProject2026/Slotopol-server/game/keno"
 )
 
 // RTP[ 2] = 92.088608%, sigma = 1.369910

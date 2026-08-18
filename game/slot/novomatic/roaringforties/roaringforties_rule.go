@@ -3,7 +3,7 @@ package roaringforties
 // See: https://freeslotshub.com/novomatic/roaring-forties/
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

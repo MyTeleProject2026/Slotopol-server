@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/slotopol/server/config"
-	"github.com/slotopol/server/game"
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 // Returns full list of all available algorithms.

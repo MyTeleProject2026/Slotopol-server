@@ -7,7 +7,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 type CM uint // Calculations method

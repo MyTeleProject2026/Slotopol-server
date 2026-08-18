@@ -5,7 +5,7 @@ package icefruits6x3
 import (
 	_ "embed"
 
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 //go:embed icefruits6x3_data.yaml

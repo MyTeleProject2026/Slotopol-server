@@ -3,7 +3,7 @@ package thrillspin
 // See: https://www.youtube.com/watch?v=bAQaKujiLAU
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

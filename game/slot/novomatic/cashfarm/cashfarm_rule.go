@@ -3,7 +3,7 @@ package cashfarm
 // See: https://casino.ru/cash-farm-novomatic/
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

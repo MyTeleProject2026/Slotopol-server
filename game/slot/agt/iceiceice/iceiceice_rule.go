@@ -3,7 +3,7 @@ package iceiceice
 // See: https://agtsoftware.com/games/agt/iceiceice
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

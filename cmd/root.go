@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/slotopol/server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
 
 	"github.com/spf13/cobra"
 )

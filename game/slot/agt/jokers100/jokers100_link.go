@@ -5,7 +5,7 @@ package jokers100
 import (
 	_ "embed"
 
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 //go:embed jokers100_data.yaml

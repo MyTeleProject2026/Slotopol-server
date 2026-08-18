@@ -5,7 +5,7 @@ package cashfarm
 import (
 	_ "embed"
 
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 //go:embed cashfarm_data.yaml

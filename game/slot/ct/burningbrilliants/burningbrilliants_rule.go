@@ -3,7 +3,7 @@ package burningbrilliants
 // See: https://www.slotsmate.com/software/ct-interactive/100-burning-brilliants
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

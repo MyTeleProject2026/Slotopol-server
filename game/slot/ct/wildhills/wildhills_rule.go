@@ -4,7 +4,7 @@ package wildhills
 // similar: ct/forestnymph, ct/beetlestar (difference in payouts for wilds)
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

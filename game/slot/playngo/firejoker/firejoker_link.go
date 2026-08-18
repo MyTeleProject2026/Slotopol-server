@@ -5,7 +5,7 @@ package firejoker
 import (
 	_ "embed"
 
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 //go:embed firejoker_data.yaml

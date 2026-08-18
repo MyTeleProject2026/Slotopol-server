@@ -8,7 +8,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 func BruteForce5x3es2(ctx context.Context, sp *slot.ScanPar, s slot.Simulator, g *Game, reels slot.Reelx, es slot.Sym) {

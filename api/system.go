@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/slotopol/server/config"
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/klauspost/cpuid/v2"

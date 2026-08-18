@@ -5,9 +5,9 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/slotopol/server/config"
-	"github.com/slotopol/server/game"
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

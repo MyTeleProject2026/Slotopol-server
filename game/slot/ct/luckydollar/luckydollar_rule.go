@@ -3,7 +3,7 @@ package luckydollar
 // See: https://www.slotsmate.com/software/ct-interactive/lucky-dollar
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

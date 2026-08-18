@@ -5,7 +5,7 @@ package dynastyofra
 import (
 	_ "embed"
 
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 //go:embed dynastyofra_data.yaml

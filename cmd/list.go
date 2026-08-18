@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/slotopol/server/config"
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 
 	"github.com/spf13/cobra"
 )
