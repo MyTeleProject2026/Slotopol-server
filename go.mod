@@ -60,6 +60,9 @@ require (
 	xorm.io/builder v0.3.13 // indirect
 )
 
+// Local replace to allow imports that use the historical path
+replace github.com/slotopol/server => ./
+
 // Advice: add to file `.vscode/settings.json` followed lines:
 // {
 //     "gopls": {
