@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/MyTeleProject2026/Slotopol-server/config"
 	"github.com/MyTeleProject2026/Slotopol-server/game"
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
