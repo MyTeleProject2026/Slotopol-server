@@ -9,6 +9,48 @@ import (
 	"xorm.io/xorm"
 )
 
+// ============================================================
+// Command-line flags and exports for cmd package
+// ============================================================
+
+// AppName is the application name used in CLI.
+var AppName = "slotopol"
+
+// Command-line flags (set by cobra)
+var (
+	CfgFile string   // path to config file
+	SqlPath string   // path to sqlite databases
+	ObjPath []string // additional yaml paths
+	Verbose bool     // verbose logging
+)
+
+// InitConfig initializes the configuration from CfgFile.
+func InitConfig() {
+	if CfgFile == "" {
+		// default config path
+		CfgFile = filepath.Join(".", "appdata", "slot-app.yaml")
+	}
+	if err := LoadConfig(CfgFile); err != nil {
+		panic(err)
+	}
+}
+
+// DirExists checks if a directory exists.
+func DirExists(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return info.IsDir(), nil
+}
+
+// ============================================================
+// Original config structures and variables
+// ============================================================
+
 var (
 	// compiled binary version, sets by compiler with command
 	//    go build -ldflags="-X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=%buildvers%'"
@@ -26,7 +68,7 @@ const DefMRTP = 95.0
 var (
 	ExePath string
 	CfgPath string
-	SqlPath string
+	// SqlPath is declared above
 )
 
 type CfgJwtAuth struct {
@@ -100,10 +142,10 @@ type Config struct {
 	CfgXormDrv  `json:"database" yaml:"database" mapstructure:"database"`
 	CfgGameplay `json:"gameplay" yaml:"gameplay" mapstructure:"gameplay"`
 
-	// NEW: Cloudinary
+	// Cloudinary
 	Cloudinary CfgCloudinary `json:"cloudinary" yaml:"cloudinary" mapstructure:"cloudinary"`
 
-	// NEW: Uploads
+	// Uploads
 	Uploads CfgUploads `json:"uploads" yaml:"uploads" mapstructure:"uploads"`
 }
 
