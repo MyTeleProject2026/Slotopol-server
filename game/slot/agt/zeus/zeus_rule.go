@@ -3,7 +3,7 @@ package zeus
 // See: https://agtsoftware.org/games/agt/zeus
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (
