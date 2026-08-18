@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 type Filter func(*GameInfo) bool
