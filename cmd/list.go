@@ -161,7 +161,7 @@ var listCmd = &cobra.Command{
 	Use:     "list",
 	Short:   listShort,
 	Long:    listLong,
-	Example: fmt.Sprintf(listExmp, cfg.AppName),
+	Example: fmt.Sprintf(listExmp, config.AppName),
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 		var exitctx = context.Background()
