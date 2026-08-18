@@ -7,7 +7,6 @@ import (
 	"github.com/MyTeleProject2026/Slotopol-server/config"
 )
 
-// Returns all properties for pointed user at pointed club.
 func ApiPropsGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -56,7 +55,6 @@ func ApiPropsGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Returns balance at wallet for pointed user at pointed club.
 func ApiPropsWalletGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -99,7 +97,6 @@ func ApiPropsWalletGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Adds some coins to user wallet. Sum can be < 0 to remove some coins.
 func ApiPropsWalletAdd(c *gin.Context) {
 	var err error
 	var ok bool
@@ -118,7 +115,7 @@ func ApiPropsWalletAdd(c *gin.Context) {
 		Ret400(c, AEC_prop_walletadd_nobind, err)
 		return
 	}
-	if arg.Sum > cfg.Cfg.AdjunctLimit || arg.Sum < -cfg.Cfg.AdjunctLimit {
+	if arg.Sum > Cfg.AdjunctLimit || arg.Sum < -Cfg.AdjunctLimit {
 		Ret400(c, AEC_prop_walletadd_limit, ErrTooBig)
 		return
 	}
@@ -152,15 +149,13 @@ func ApiPropsWalletAdd(c *gin.Context) {
 		return
 	}
 
-	// update wallet as transaction
 	if Cfg.ClubInsertBuffer > 1 {
-		go BankBat[arg.CID].Add(cfg.XormStorage, arg.UID, admin.UID, props.Wallet+arg.Sum, arg.Sum)
-	} else if err = BankBat[arg.CID].Add(cfg.XormStorage, arg.UID, admin.UID, props.Wallet+arg.Sum, arg.Sum); err != nil {
+		go BankBat[arg.CID].Add(XormStorage, arg.UID, admin.UID, props.Wallet+arg.Sum, arg.Sum)
+	} else if err = BankBat[arg.CID].Add(XormStorage, arg.UID, admin.UID, props.Wallet+arg.Sum, arg.Sum); err != nil {
 		Ret500(c, AEC_prop_walletadd_sql, err)
 		return
 	}
 
-	// make changes to memory data
 	props.Wallet += arg.Sum
 
 	ret.Wallet = props.Wallet
@@ -168,7 +163,6 @@ func ApiPropsWalletAdd(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Returns personal access level for pointed user at pointed club.
 func ApiPropsAlGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -215,7 +209,6 @@ func ApiPropsAlGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Set personal access level for given user at given club.
 func ApiPropsAlSet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -261,22 +254,18 @@ func ApiPropsAlSet(c *gin.Context) {
 		return
 	}
 
-	// update access level as transaction
 	if Cfg.ClubInsertBuffer > 1 {
-		go BankBat[arg.CID].Access(cfg.XormStorage, arg.UID, arg.Access)
-	} else if err = BankBat[arg.CID].Access(cfg.XormStorage, arg.UID, arg.Access); err != nil {
+		go BankBat[arg.CID].Access(XormStorage, arg.UID, arg.Access)
+	} else if err = BankBat[arg.CID].Access(XormStorage, arg.UID, arg.Access); err != nil {
 		Ret500(c, AEC_prop_rtpset_sql, err)
 		return
 	}
 
-	// make changes to memory data
 	props.Access = arg.Access
 
 	Ret204(c)
 }
 
-// Returns master RTP for pointed user at pointed club.
-// This RTP if it set have more priority then club RTP.
 func ApiPropsRtpGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -324,7 +313,6 @@ func ApiPropsRtpGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Set personal master RTP for given user at given club.
 func ApiPropsRtpSet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -366,15 +354,13 @@ func ApiPropsRtpSet(c *gin.Context) {
 		return
 	}
 
-	// update master RTP as transaction
 	if Cfg.ClubInsertBuffer > 1 {
-		go BankBat[arg.CID].MRTP(cfg.XormStorage, arg.UID, arg.MRTP)
-	} else if err = BankBat[arg.CID].MRTP(cfg.XormStorage, arg.UID, arg.MRTP); err != nil {
+		go BankBat[arg.CID].MRTP(XormStorage, arg.UID, arg.MRTP)
+	} else if err = BankBat[arg.CID].MRTP(XormStorage, arg.UID, arg.MRTP); err != nil {
 		Ret500(c, AEC_prop_rtpset_sql, err)
 		return
 	}
 
-	// make changes to memory data
 	props.MRTP = arg.MRTP
 
 	Ret204(c)
