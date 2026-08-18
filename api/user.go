@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 
 	"github.com/gin-gonic/gin"
-	"github.com/MyTeleProject2026/Slotopol-server/util"
+	
 )
 
 // ApiUserIs checks if a user exists.
