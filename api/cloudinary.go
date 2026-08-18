@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/MyTeleProject2026/Slotopol-server/config"
+	// config is not needed because we use global Cfg from auth.go
 )
 
 // CloudinaryImage represents the response from Cloudinary upload
