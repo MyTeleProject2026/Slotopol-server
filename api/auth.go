@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	jwtIssuer = "slotopol"
-	userKey   = "user"
+	jwtIssuer   = "slotopol"
+	userKey     = "user"
 	realmBasic  = `Basic realm="slotopol", charset="UTF-8"`
 	realmBearer = `JWT realm="slotopol", charset="UTF-8"`
 )
@@ -50,8 +50,10 @@ var (
 	ErrBadHash  = errors.New("hash cannot be decoded in hexadecimal")
 )
 
+// Cfg is the global config reference – flat structure
 var Cfg = config.Cfg
 
+// Claims of JWT-tokens
 type Claims struct {
 	jwt.RegisteredClaims
 	UID uint64 `json:"uid,omitempty"`
@@ -66,10 +68,12 @@ func (c *Claims) Validate() error {
 
 type AuthGetter func(c *gin.Context) (*User, int, error)
 
+// AuthGetters is the list of functions to extract authorization data
 var AuthGetters = []AuthGetter{
 	UserFromHeader, UserFromQuery, UserFromCookie,
 }
 
+// Auth is authorization middleware
 func Auth(required bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var err error
@@ -91,7 +95,6 @@ func Auth(required bool) gin.HandlerFunc {
 			Ret401(c, AEC_auth_absent, ErrNoAuth)
 			return
 		}
-
 		c.Next()
 	}
 }
@@ -172,8 +175,8 @@ func GetBearerAuth(tokenstr string) (user *User, code int, err error) {
 	_, err = jwt.ParseWithClaims(tokenstr, &claims, func(*jwt.Token) (any, error) {
 		var keys = jwt.VerificationKeySet{
 			Keys: []jwt.VerificationKey{
-				util.S2B(Cfg.Authentication.AccessKey),
-				util.S2B(Cfg.Authentication.RefreshKey),
+				util.S2B(Cfg.AccessKey),   // flat field
+				util.S2B(Cfg.RefreshKey),  // flat field
 			},
 		}
 		return keys, nil
@@ -227,8 +230,8 @@ func (r *AuthResp) Setup(user *User) {
 	var err error
 	var token *jwt.Token
 	var now = jwt.NewNumericDate(time.Now())
-	var exp = jwt.NewNumericDate(time.Now().Add(Cfg.Authentication.AccessTTL))
-	var age = jwt.NewNumericDate(time.Now().Add(Cfg.Authentication.RefreshTTL))
+	var exp = jwt.NewNumericDate(time.Now().Add(Cfg.AccessTTL))   // flat
+	var age = jwt.NewNumericDate(time.Now().Add(Cfg.RefreshTTL)) // flat
 	token = jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			NotBefore: now,
@@ -237,7 +240,7 @@ func (r *AuthResp) Setup(user *User) {
 		},
 		UID: user.UID,
 	})
-	if r.Access, err = token.SignedString([]byte(Cfg.Authentication.AccessKey)); err != nil {
+	if r.Access, err = token.SignedString([]byte(Cfg.AccessKey)); err != nil { // flat
 		panic(err)
 	}
 	r.Expire = exp.Format(time.RFC3339)
@@ -249,7 +252,7 @@ func (r *AuthResp) Setup(user *User) {
 		},
 		UID: user.UID,
 	})
-	if r.Refrsh, err = token.SignedString([]byte(Cfg.Authentication.AccessKey)); err != nil {
+	if r.Refrsh, err = token.SignedString([]byte(Cfg.AccessKey)); err != nil { // flat
 		panic(err)
 	}
 	r.Living = age.Format(time.RFC3339)
@@ -275,11 +278,11 @@ func sendcode(name, email string, code uint32) (err error) {
 	const ct = "application/json"
 	var m = content{
 		Sender: person{
-			Name:  Cfg.Activation.SenderName,
-			Email: Cfg.Activation.SenderEmail,
+			Name:  Cfg.SenderName,   // flat
+			Email: Cfg.SenderEmail,  // flat
 		},
 		ReplyTo: person{
-			Email: Cfg.Activation.ReplytoEmail,
+			Email: Cfg.ReplytoEmail, // flat
 		},
 		To: []person{
 			{
@@ -287,8 +290,8 @@ func sendcode(name, email string, code uint32) (err error) {
 				Email: email,
 			},
 		},
-		Subject: Cfg.Activation.EmailSubject,
-		Html:    fmt.Sprintf(Cfg.Activation.EmailHtmlContent, code),
+		Subject: Cfg.EmailSubject,          // flat
+		Html:    fmt.Sprintf(Cfg.EmailHtmlContent, code), // flat
 	}
 
 	var body []byte
@@ -297,10 +300,10 @@ func sendcode(name, email string, code uint32) (err error) {
 	}
 
 	var req *http.Request
-	if req, err = http.NewRequest("POST", Cfg.Activation.BrevoEmailEndpoint, bytes.NewReader(body)); err != nil {
+	if req, err = http.NewRequest("POST", Cfg.BrevoEmailEndpoint, bytes.NewReader(body)); err != nil {
 		return err
 	}
-	req.Header.Set("api-key", Cfg.Activation.BrevoApiKey)
+	req.Header.Set("api-key", Cfg.BrevoApiKey) // flat
 	req.Header.Set("Content-Type", ct)
 	req.Header.Set("Accept", ct)
 
@@ -451,7 +454,7 @@ func ApiActivate(c *gin.Context) {
 	}
 
 	if _, al := GetAdmin(c, 0); al&ALadmin == 0 {
-		if time.Since(user.UTime) > Cfg.Activation.CodeTimeout {
+		if time.Since(user.UTime) > Cfg.CodeTimeout { // flat
 			Ret403(c, AEC_activate_oldcode, ErrOldCode)
 			return
 		}
@@ -498,7 +501,7 @@ func ApiSignup(c *gin.Context) {
 
 	var code uint32
 	var status UF
-	if _, al := GetAdmin(c, 0); al&ALadmin != 0 || !Cfg.Activation.UseActivation {
+	if _, al := GetAdmin(c, 0); al&ALadmin != 0 || !Cfg.UseActivation { // flat
 		status = UFactivated
 	} else {
 		code = rand.N[uint32](1000000)
@@ -605,7 +608,7 @@ func ApiSignin(c *gin.Context) {
 	}
 
 	if user.Status&UFsigncode != 0 {
-		if time.Since(user.UTime) > Cfg.Activation.CodeTimeout {
+		if time.Since(user.UTime) > Cfg.CodeTimeout { // flat
 			Ret403(c, AEC_signin_oldcode, ErrOldCode)
 			return
 		}
@@ -626,7 +629,7 @@ func ApiSignin(c *gin.Context) {
 			Ret400(c, AEC_signin_sigtime, ErrSigTime)
 			return
 		}
-		if time.Since(sigtime) > Cfg.Authentication.NonceTimeout {
+		if time.Since(sigtime) > Cfg.NonceTimeout { // flat
 			Ret403(c, AEC_signin_timeout, ErrSigOut)
 			return
 		}
