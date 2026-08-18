@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 const lolim = 1e6 // lower limit, let some space to get approximate sigma
