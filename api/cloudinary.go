@@ -7,7 +7,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -35,20 +34,20 @@ type CloudinaryImage struct {
 
 // CloudinaryUploadParams holds upload configuration
 type CloudinaryUploadParams struct {
-	File          multipart.File
-	Filename      string
-	PublicID      string
-	Folder        string
-	Tags          []string
+	File           multipart.File
+	Filename       string
+	PublicID       string
+	Folder         string
+	Tags           []string
 	Transformation string
 }
 
 // UploadToCloudinary uploads a file to Cloudinary
 func UploadToCloudinary(params CloudinaryUploadParams) (*CloudinaryImage, error) {
-	cloudName := cfg.Cfg.Cloudinary.CloudName
-	apiKey := cfg.Cfg.Cloudinary.APIKey
-	apiSecret := cfg.Cfg.Cloudinary.APISecret
-	uploadFolder := cfg.Cfg.Cloudinary.UploadFolder
+	cloudName := Cfg.Cloudinary.CloudName
+	apiKey := Cfg.Cloudinary.APIKey
+	apiSecret := Cfg.Cloudinary.APISecret
+	uploadFolder := Cfg.Cloudinary.UploadFolder
 
 	if cloudName == "" || apiKey == "" || apiSecret == "" {
 		return nil, fmt.Errorf("Cloudinary credentials not configured")
@@ -173,13 +172,13 @@ func ApiUploadImage(c *gin.Context) {
 	defer src.Close()
 
 	// Check file size
-	if file.Size > cfg.Cfg.Uploads.MaxFileSize {
-		Ret400(c, 0, fmt.Errorf("file size exceeds maximum of %d bytes", cfg.Cfg.Uploads.MaxFileSize))
+	if file.Size > Cfg.Uploads.MaxFileSize {
+		Ret400(c, 0, fmt.Errorf("file size exceeds maximum of %d bytes", Cfg.Uploads.MaxFileSize))
 		return
 	}
 
 	// Check file type
-	allowedTypes := cfg.Cfg.Uploads.AllowedTypes
+	allowedTypes := Cfg.Uploads.AllowedTypes
 	contentType := file.Header.Get("Content-Type")
 	allowed := false
 	for _, t := range allowedTypes {
@@ -214,7 +213,7 @@ func ApiUploadImage(c *gin.Context) {
 
 	// Save to database
 	user := c.MustGet(userKey).(*User)
-	if err := SafeTransaction(cfg.XormStorage, func(session *Session) error {
+	if err := SafeTransaction(XormStorage, func(session *Session) error {
 		_, err := session.Exec(
 			`INSERT INTO cloudinary_images (public_id, url, secure_url, format, width, height, bytes, uploaded_by, folder, tags)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -246,7 +245,7 @@ func ApiGetImages(c *gin.Context) {
 	}
 
 	var images []CloudinaryImage
-	var query = cfg.XormStorage.Where("1=1")
+	var query = XormStorage.Where("1=1")
 	if arg.Folder != "" {
 		query = query.Where("folder = ?", arg.Folder)
 	}
@@ -273,9 +272,9 @@ func ApiDeleteImage(c *gin.Context) {
 		return
 	}
 
-	cloudName := cfg.Cfg.Cloudinary.CloudName
-	apiKey := cfg.Cfg.Cloudinary.APIKey
-	apiSecret := cfg.Cfg.Cloudinary.APISecret
+	cloudName := Cfg.Cloudinary.CloudName
+	apiKey := Cfg.Cloudinary.APIKey
+	apiSecret := Cfg.Cloudinary.APISecret
 
 	// Build Cloudinary delete URL
 	deleteURL := fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/destroy", cloudName)
@@ -308,7 +307,7 @@ func ApiDeleteImage(c *gin.Context) {
 	}
 
 	// Delete from database
-	if _, err := cfg.XormStorage.Exec("DELETE FROM cloudinary_images WHERE public_id = ?", arg.PublicID); err != nil {
+	if _, err := XormStorage.Exec("DELETE FROM cloudinary_images WHERE public_id = ?", arg.PublicID); err != nil {
 		Ret500(c, 0, err)
 		return
 	}
