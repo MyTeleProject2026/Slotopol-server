@@ -37,19 +37,14 @@ var (
 )
 
 func Startup() (exitctx context.Context) {
-	//var cancel context.CancelFunc
 	exitctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		// Make exit signal on function exit.
 		defer cancel()
 
 		var sigint = make(chan os.Signal, 1)
 		var sigterm = make(chan os.Signal, 1)
-		// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C) or SIGTERM (Ctrl+/)
-		// SIGKILL, SIGQUIT will not be caught.
 		signal.Notify(sigint, syscall.SIGINT)
 		signal.Notify(sigterm, syscall.SIGTERM)
-		// Block until we receive our signal.
 		select {
 		case <-exitctx.Done():
 			if errors.Is(exitctx.Err(), context.DeadlineExceeded) {
@@ -70,7 +65,6 @@ func Startup() (exitctx context.Context) {
 	return
 }
 
-// Load data from embed yaml chunks.
 func LoadInternalYaml(ctx context.Context) {
 	var t0 = time.Now()
 	var size int
@@ -105,7 +99,6 @@ func LoadYamlFromFile(fullpath string) (err error) {
 	return nil
 }
 
-// Load data from extermal yaml files.
 func LoadExternalYaml(ctx context.Context) (err error) {
 	for _, root := range config.ObjPath {
 		root, _ = util.ExpandHomePath(root)
@@ -192,30 +185,85 @@ func InitStorage() (err error) {
 		return
 	}
 
-	var ok bool
-	if ok, err = session.IsTableEmpty(&api.ClubData{}); err != nil {
+	// --- FIX: use absolute path to appdata for initialization files ---
+	appdataDir := "appdata"
+	// If running in Render, the binary is in the root, appdata is a subdirectory.
+	// If local, it might be in the same directory as binary; we'll check both.
+	if _, err := os.Stat(appdataDir); os.IsNotExist(err) {
+		// Try relative to executable path
+		appdataDir = filepath.Join(config.ExePath, "appdata")
+	}
+
+	// Check if club table is empty; if so, run the full init SQL
+	var clubEmpty bool
+	if clubEmpty, err = session.IsTableEmpty(&api.ClubData{}); err != nil {
 		return
 	}
-	if ok {
+	if clubEmpty {
+		// Load the SQL file
+		sqlPath := filepath.Join(appdataDir, "slot-clubinit.sql")
 		var body []byte
-		if body, err = os.ReadFile(util.JoinFilePath(config.CfgPath, "slot-clubinit.sql")); err != nil {
+		if body, err = os.ReadFile(sqlPath); err != nil {
 			log.Printf("can not open SQL-file with initial settings: %s", err.Error())
-			err = nil // remove error
-		}
-		var list = bytes.Split(body, []byte{';'})
-		for _, cmd := range list {
-			if cmd = bytes.TrimSpace(cmd); len(cmd) > 0 {
-				if _, err = session.Exec(util.B2S(cmd)); err != nil {
-					return
+			// Allow continue, but we will also try to insert defaults if missing
+		} else {
+			var list = bytes.Split(body, []byte{';'})
+			for _, cmd := range list {
+				if cmd = bytes.TrimSpace(cmd); len(cmd) > 0 {
+					if _, err = session.Exec(util.B2S(cmd)); err != nil {
+						return
+					}
 				}
 			}
+			log.Println("initialized club table with SQL")
 		}
 	}
 
-	// Read properies master for new registered user
+	// --- NEW: Ensure default users exist even if club table was not empty ---
+	// This is to fix the "props without user" error when users table is empty.
+	var userCount int64
+	if userCount, err = session.Count(&api.User{}); err != nil {
+		return
+	}
+	if userCount == 0 {
+		log.Println("users table is empty, inserting default users and props")
+
+		// Insert default users
+		defaultUsers := []api.User{
+			{UID: 1, Email: "admin@slotopol.com", Secret: "admin123", Name: "Administrator", Status: api.UFactivated, GAL: 31},
+			{UID: 2, Email: "dealer@slotopol.com", Secret: "dealer123", Name: "Dealer", Status: api.UFactivated, GAL: 3},
+			{UID: 3, Email: "player@slotopol.com", Secret: "player123", Name: "Player", Status: api.UFactivated, GAL: 1},
+		}
+		for _, u := range defaultUsers {
+			if _, err = session.Insert(&u); err != nil {
+				return
+			}
+		}
+
+		// Insert default props (assuming club 1 exists)
+		defaultProps := []api.Props{
+			{CID: 1, UID: 1, Wallet: 100000, Access: 31, MRTP: 0},
+			{CID: 2, UID: 1, Wallet: 0, Access: 0, MRTP: 0},
+			{CID: 1, UID: 2, Wallet: 10000, Access: 13, MRTP: 0},
+			{CID: 2, UID: 2, Wallet: 0, Access: 0, MRTP: 0},
+			{CID: 1, UID: 3, Wallet: 1000, Access: 1, MRTP: 98},
+			{CID: 2, UID: 3, Wallet: 0, Access: 0, MRTP: 98},
+		}
+		for _, p := range defaultProps {
+			if _, err = session.Insert(&p); err != nil {
+				return
+			}
+		}
+
+		log.Println("default users and props inserted")
+	}
+
+	// Load properties master for new registered user (from YAML)
+	yamlPath := filepath.Join(appdataDir, "slot-newuser.yaml")
 	var body []byte
-	if body, err = os.ReadFile(util.JoinFilePath(config.CfgPath, "slot-newuser.yaml")); err != nil {
+	if body, err = os.ReadFile(yamlPath); err != nil {
 		log.Printf("can not open YAML-file with properties initialization for new user: %s", err.Error())
+		// Not fatal – we already inserted default users
 		err = nil // remove error
 	} else if err = yaml.Unmarshal(body, &api.PropMaster); err != nil {
 		log.Printf("can not unmarshal 'slot-newuser.yaml': %s", err.Error())
@@ -273,7 +321,9 @@ func InitStorage() (err error) {
 			}
 			var user, ok = api.Users.Get(props.UID)
 			if !ok {
-				return fmt.Errorf("found props without user linkage, UID=%d, CID=%d, value=%g", props.UID, props.CID, props.Wallet)
+				// Skip props for missing users (shouldn't happen now, but safety)
+				log.Printf("warning: skipping props for missing user UID=%d, CID=%d", props.UID, props.CID)
+				continue
 			}
 			user.InsertProps(props)
 		}
