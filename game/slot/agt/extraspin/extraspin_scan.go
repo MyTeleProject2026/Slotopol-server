@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/MyTeleProject2026/Slotopol-server//game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 func CalcStat(ctx context.Context, sp *slot.ScanPar) (float64, float64) {
