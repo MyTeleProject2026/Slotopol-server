@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 
 	"github.com/gin-gonic/gin"
-	
 )
 
 // ApiUserIs checks if a user exists.
@@ -152,7 +151,7 @@ func ApiUserDelete(c *gin.Context) {
 		Ret403(c, 0, ErrNoAccess)
 		return
 	}
-	_ = user // avoid unused warning (we use it to check existence)
+	_ = user // avoid unused warning
 
 	// Remove from memory
 	Users.Delete(arg.UID)
