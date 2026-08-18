@@ -55,11 +55,10 @@ var (
 	ErrBadHash  = errors.New("hash cannot be decoded in hexadecimal")
 )
 
-var (
-	Cfg = cfg.Cfg
-)
+var Cfg = config.Cfg
 
-// Claims of JWT-tokens. Contains additional profile identifier.
+
+// Claims of JWT-tokens. Contains additionale identifier.
 type Claims struct {
 	jwt.RegisteredClaims
 	UID uint64 `json:"uid,omitempty"`
