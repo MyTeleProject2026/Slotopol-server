@@ -2,10 +2,8 @@ package api
 
 import (
 	"encoding/xml"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/MyTeleProject2026/Slotopol-server/config"
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
@@ -25,13 +23,13 @@ func ApiUserIs(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_user_is_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var admin, al = MustAdmin(c, 0)
 	if admin == nil || al&ALadmin == 0 {
-		Ret403(c, AEC_user_is_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -58,19 +56,19 @@ func ApiUserRename(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_user_rename_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_user_rename_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, 0)
 	if admin == nil || al&ALadmin == 0 {
-		Ret403(c, AEC_user_rename_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -79,7 +77,7 @@ func ApiUserRename(c *gin.Context) {
 
 	// Update in database
 	if _, err = XormStorage.ID(arg.UID).Cols("name").Update(&User{Name: arg.Name}); err != nil {
-		Ret500(c, AEC_user_rename_sql, err)
+		Ret500(c, 0, err)
 		return
 	}
 
@@ -97,23 +95,23 @@ func ApiUserSecret(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_user_secret_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 	if len(arg.Secret) < 6 {
-		Ret400(c, AEC_user_secret_small, ErrSmallKey)
+		Ret400(c, 0, ErrSmallKey)
 		return
 	}
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_user_secret_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, 0)
 	if admin == nil || al&ALadmin == 0 {
-		Ret403(c, AEC_user_secret_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -122,14 +120,14 @@ func ApiUserSecret(c *gin.Context) {
 
 	// Update in database
 	if _, err = XormStorage.ID(arg.UID).Cols("secret").Update(&User{Secret: arg.Secret}); err != nil {
-		Ret500(c, AEC_user_secret_sql, err)
+		Ret500(c, 0, err)
 		return
 	}
 
 	Ret204(c)
 }
 
-// ApiUserDelete removes a user (soft delete or hard delete).
+// ApiUserDelete removes a user (hard delete).
 func ApiUserDelete(c *gin.Context) {
 	var err error
 	var ok bool
@@ -139,28 +137,29 @@ func ApiUserDelete(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_user_delete_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_user_delete_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, 0)
 	if admin == nil || al&ALadmin == 0 {
-		Ret403(c, AEC_user_delete_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
+	_ = user // avoid unused warning (we use it to check existence)
 
 	// Remove from memory
 	Users.Delete(arg.UID)
 
-	// Delete from database (hard delete)
+	// Delete from database
 	if _, err = XormStorage.ID(arg.UID).Delete(&User{}); err != nil {
-		Ret500(c, AEC_user_delete_sql, err)
+		Ret500(c, 0, err)
 		return
 	}
 
