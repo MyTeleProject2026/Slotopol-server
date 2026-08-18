@@ -23,13 +23,8 @@ import (
 )
 
 const (
-	// "iss" field for this tokens.
 	jwtIssuer = "slotopol"
-
-	// Pointer to User object stored at gin context
-	// after successful authorization.
-	userKey = "user"
-
+	userKey   = "user"
 	realmBasic  = `Basic realm="slotopol", charset="UTF-8"`
 	realmBearer = `JWT realm="slotopol", charset="UTF-8"`
 )
@@ -55,10 +50,8 @@ var (
 	ErrBadHash  = errors.New("hash cannot be decoded in hexadecimal")
 )
 
-// Cfg is the global configuration reference
 var Cfg = config.Cfg
 
-// Claims of JWT-tokens. Contains additional profile identifier.
 type Claims struct {
 	jwt.RegisteredClaims
 	UID uint64 `json:"uid,omitempty"`
@@ -73,15 +66,10 @@ func (c *Claims) Validate() error {
 
 type AuthGetter func(c *gin.Context) (*User, int, error)
 
-// AuthGetters is the list of functions to extract the authorization
-// data from the parts of request. List and order in it can be changed.
 var AuthGetters = []AuthGetter{
 	UserFromHeader, UserFromQuery, UserFromCookie,
 }
 
-// Auth is authorization middleware, sets User object associated
-// with authorization to gin context. `required` parameter tells
-// to continue if authorization is absent.
 func Auth(required bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var err error
@@ -184,8 +172,8 @@ func GetBearerAuth(tokenstr string) (user *User, code int, err error) {
 	_, err = jwt.ParseWithClaims(tokenstr, &claims, func(*jwt.Token) (any, error) {
 		var keys = jwt.VerificationKeySet{
 			Keys: []jwt.VerificationKey{
-				util.S2B(Cfg.AccessKey),
-				util.S2B(Cfg.RefreshKey),
+				util.S2B(Cfg.Authentication.AccessKey),
+				util.S2B(Cfg.Authentication.RefreshKey),
 			},
 		}
 		return keys, nil
@@ -239,8 +227,8 @@ func (r *AuthResp) Setup(user *User) {
 	var err error
 	var token *jwt.Token
 	var now = jwt.NewNumericDate(time.Now())
-	var exp = jwt.NewNumericDate(time.Now().Add(Cfg.AccessTTL))
-	var age = jwt.NewNumericDate(time.Now().Add(Cfg.RefreshTTL))
+	var exp = jwt.NewNumericDate(time.Now().Add(Cfg.Authentication.AccessTTL))
+	var age = jwt.NewNumericDate(time.Now().Add(Cfg.Authentication.RefreshTTL))
 	token = jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			NotBefore: now,
@@ -249,7 +237,7 @@ func (r *AuthResp) Setup(user *User) {
 		},
 		UID: user.UID,
 	})
-	if r.Access, err = token.SignedString([]byte(Cfg.AccessKey)); err != nil {
+	if r.Access, err = token.SignedString([]byte(Cfg.Authentication.AccessKey)); err != nil {
 		panic(err)
 	}
 	r.Expire = exp.Format(time.RFC3339)
@@ -261,7 +249,7 @@ func (r *AuthResp) Setup(user *User) {
 		},
 		UID: user.UID,
 	})
-	if r.Refrsh, err = token.SignedString([]byte(Cfg.AccessKey)); err != nil {
+	if r.Refrsh, err = token.SignedString([]byte(Cfg.Authentication.AccessKey)); err != nil {
 		panic(err)
 	}
 	r.Living = age.Format(time.RFC3339)
@@ -287,11 +275,11 @@ func sendcode(name, email string, code uint32) (err error) {
 	const ct = "application/json"
 	var m = content{
 		Sender: person{
-			Name:  Cfg.SenderName,
-			Email: Cfg.SenderEmail,
+			Name:  Cfg.Activation.SenderName,
+			Email: Cfg.Activation.SenderEmail,
 		},
 		ReplyTo: person{
-			Email: Cfg.ReplytoEmail,
+			Email: Cfg.Activation.ReplytoEmail,
 		},
 		To: []person{
 			{
@@ -299,8 +287,8 @@ func sendcode(name, email string, code uint32) (err error) {
 				Email: email,
 			},
 		},
-		Subject: Cfg.EmailSubject,
-		Html:    fmt.Sprintf(Cfg.EmailHtmlContent, code),
+		Subject: Cfg.Activation.EmailSubject,
+		Html:    fmt.Sprintf(Cfg.Activation.EmailHtmlContent, code),
 	}
 
 	var body []byte
@@ -309,10 +297,10 @@ func sendcode(name, email string, code uint32) (err error) {
 	}
 
 	var req *http.Request
-	if req, err = http.NewRequest("POST", Cfg.BrevoEmailEndpoint, bytes.NewReader(body)); err != nil {
+	if req, err = http.NewRequest("POST", Cfg.Activation.BrevoEmailEndpoint, bytes.NewReader(body)); err != nil {
 		return err
 	}
-	req.Header.Set("api-key", Cfg.BrevoApiKey)
+	req.Header.Set("api-key", Cfg.Activation.BrevoApiKey)
 	req.Header.Set("Content-Type", ct)
 	req.Header.Set("Accept", ct)
 
@@ -339,7 +327,7 @@ func ApiSignis(c *gin.Context) {
 	var err error
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
-		UID     uint64   `json:"uid" yaml:"uid" xml:"uid" form:"uid" binding:"required_without=Email"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
 		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
 	}
 	var ret struct {
@@ -386,7 +374,7 @@ func ApiSendCode(c *gin.Context) {
 	var err error
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
-		UID     uint64   `json:"uid" yaml:"uid" xml:"uid" form:"uid" binding:"required_without=Email"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
 		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
 	}
 
@@ -413,7 +401,7 @@ func ApiSendCode(c *gin.Context) {
 		return
 	}
 
-	var code = rand.N[uint32](1000000) // 6 digits
+	var code = rand.N[uint32](1000000)
 
 	if _, err = XormStorage.ID(user.UID).Cols("code").Update(&User{Code: code}); err != nil {
 		Ret500(c, AEC_sendcode_update, err)
@@ -434,7 +422,7 @@ func ApiActivate(c *gin.Context) {
 	var err error
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
-		UID     uint64   `json:"uid" yaml:"uid" xml:"uid" form:"uid" binding:"required_without=Email"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
 		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
 		Code    uint32   `json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty" form:"code"`
 	}
@@ -463,7 +451,7 @@ func ApiActivate(c *gin.Context) {
 	}
 
 	if _, al := GetAdmin(c, 0); al&ALadmin == 0 {
-		if time.Since(user.UTime) > Cfg.CodeTimeout {
+		if time.Since(user.UTime) > Cfg.Activation.CodeTimeout {
 			Ret403(c, AEC_activate_oldcode, ErrOldCode)
 			return
 		}
@@ -510,10 +498,10 @@ func ApiSignup(c *gin.Context) {
 
 	var code uint32
 	var status UF
-	if _, al := GetAdmin(c, 0); al&ALadmin != 0 || !Cfg.UseActivation {
+	if _, al := GetAdmin(c, 0); al&ALadmin != 0 || !Cfg.Activation.UseActivation {
 		status = UFactivated
 	} else {
-		code = rand.N[uint32](1000000) // 6 digits
+		code = rand.N[uint32](1000000)
 		if err = sendcode(arg.Name, email, code); err != nil {
 			Ret500(c, AEC_signup_code, err)
 			return
@@ -571,7 +559,7 @@ func ApiSignin(c *gin.Context) {
 	var err error
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
-		UID     uint64   `json:"uid" yaml:"uid" xml:"uid" form:"uid" binding:"required_without=Email"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
 		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
 		Secret  string   `json:"secret" yaml:"secret,omitempty" xml:"secret,omitempty" form:"secret"`
 		HS256   string   `json:"hs256,omitempty" yaml:"hs256,omitempty" xml:"hs256,omitempty" form:"hs256"`
@@ -617,7 +605,7 @@ func ApiSignin(c *gin.Context) {
 	}
 
 	if user.Status&UFsigncode != 0 {
-		if time.Since(user.UTime) > Cfg.CodeTimeout {
+		if time.Since(user.UTime) > Cfg.Activation.CodeTimeout {
 			Ret403(c, AEC_signin_oldcode, ErrOldCode)
 			return
 		}
@@ -638,7 +626,7 @@ func ApiSignin(c *gin.Context) {
 			Ret400(c, AEC_signin_sigtime, ErrSigTime)
 			return
 		}
-		if time.Since(sigtime) > Cfg.NonceTimeout {
+		if time.Since(sigtime) > Cfg.Authentication.NonceTimeout {
 			Ret403(c, AEC_signin_timeout, ErrSigOut)
 			return
 		}
