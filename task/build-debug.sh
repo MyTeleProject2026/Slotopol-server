@@ -21,6 +21,6 @@ go build -o "$GOPATH/bin/${appname}" -v\
  -tags="jsoniter"\
  -buildvcs=false\
  -ldflags="-linkmode external -extldflags -static\
- -X 'github.com/slotopol/server/config.BuildVers=$buildvers'\
- -X 'github.com/slotopol/server/config.BuildTime=$buildtime'"\
+ -X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers'\
+ -X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=$buildtime'"\
  $wd
