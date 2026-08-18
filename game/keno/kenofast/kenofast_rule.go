@@ -3,7 +3,7 @@ package kenofast
 // See: https://agtsoftware.com/games/agt/keno
 
 import (
-	"github.com/slotopol/server/game/keno"
+	"github.com/MyTeleProject2026/Slotopol-server/game/keno"
 )
 
 // RTP[ 1] = 95.000000%, sigma = 1.645448
