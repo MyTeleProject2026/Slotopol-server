@@ -101,7 +101,7 @@ var scanCmd = &cobra.Command{
 	Aliases: []string{"bf", "mc", "bruteforce", "montecarlo"},
 	Short:   scanShort,
 	Long:    scanLong,
-	Example: fmt.Sprintf(scanExmp, cfg.AppName),
+	Example: fmt.Sprintf(scanExmp, config.AppName),
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 		var exitctx = Startup()
@@ -175,7 +175,7 @@ func init() {
 	pf.StringP("game", "g", "", "identifier of game to scan")
 	// ParSheet
 	pf.Int("mt", 0, "multithreaded scanning threads number")
-	pf.Float64P("rtp", "r", cfg.DefMRTP, "master RTP of game")
+	pf.Float64P("rtp", "r", config.DefMRTP, "master RTP of game")
 	pf.IntP("sel", "l", 0, "number of selected bet lines, 0 for all")
 	pf.Float64("conf", 95, "confidence probability, in percents")
 	pf.Uint64P("total", "n", 10, "Monte Carlo method iterations number, in millions")
