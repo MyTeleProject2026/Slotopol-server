@@ -10,7 +10,7 @@
 FROM golang:1.25-bookworm AS build
 
 # Make project root folder as current dir.
-WORKDIR /go/src/github.com/slotopol/server
+WORKDIR /go/src/github.com/MyTeleProject2026/Slotopol-server
 # Copy only go.mod and go.sum to prevent downloads all dependencies again on any code changes.
 COPY go.mod go.sum ./
 # Download all dependencies pointed at go.mod file.
