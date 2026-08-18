@@ -3,7 +3,7 @@ package panda
 // See: https://agtsoftware.com/games/agt/panda
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/slot"
 )
 
 const (
