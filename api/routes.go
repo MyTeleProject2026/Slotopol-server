@@ -16,8 +16,12 @@ import (
 
 type Session = xorm.Session
 
-// XormStorage is the global database engine
-var XormStorage *xorm.Engine
+// Global database engines
+var XormStorage  *xorm.Engine
+var XormSpinlog  *xorm.Engine
+
+// Global config reference
+var Cfg = config.Cfg
 
 // "Server" field for HTTP headers.
 var serverhdr = fmt.Sprintf("slotopol/%s (%s; %s)", config.BuildVers, runtime.GOOS, runtime.GOARCH)
@@ -204,9 +208,7 @@ func SetupRouter(r *gin.Engine) {
 	rc.POST("/rename", ApiClubRename)
 	rc.POST("/cashin", ApiClubCashin)
 
-	// ============================================================
-	// Cloudinary group (image storage)
-	// ============================================================
+	// Cloudinary group
 	var rcloud = ra.Group("/cloudinary")
 	rcloud.POST("/upload", ApiUploadImage)
 	rcloud.GET("/images", ApiGetImages)
