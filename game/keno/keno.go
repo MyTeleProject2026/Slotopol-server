@@ -1,15 +1,24 @@
 package keno
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"math"
-	"math/rand/v2"
-	"sort"
-
 	"github.com/MyTeleProject2026/Slotopol-server/game"
 	"github.com/MyTeleProject2026/Slotopol-server/util"
+)
+
+// Grid represents the 80-number keno board.
+type Grid [80]int
+
+// Wins holds the result of a keno game.
+type Wins struct {
+	Sel int     // number of selected spots
+	Num int     // number of hits
+	Pay float64 // payout amount
+}
+
+// Bitmask constants for keno board cells.
+const (
+	KSsel = 1 << 0 // cell is selected
+	KShit = 1 << 1 // cell is a hit
 )
 
 type Paytable [11][11]float64
