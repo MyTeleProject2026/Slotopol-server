@@ -5,7 +5,7 @@ package redroo
 import (
 	"math/rand/v2"
 
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (
