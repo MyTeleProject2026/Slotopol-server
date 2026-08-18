@@ -3,7 +3,7 @@ package alaskawild
 // See: https://www.slotsmate.com/software/ct-interactive/alaska-wild
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

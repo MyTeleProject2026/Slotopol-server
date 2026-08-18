@@ -3,7 +3,7 @@ package magicjewels
 // See: https://www.livebet2.com/casino/slots/ct-interactive/magic-jewels
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

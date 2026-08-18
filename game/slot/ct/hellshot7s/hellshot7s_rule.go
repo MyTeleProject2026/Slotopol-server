@@ -3,7 +3,7 @@ package hellshot7s
 // See: https://www.slotsmate.com/software/ct-interactive/hells-hot-7s
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

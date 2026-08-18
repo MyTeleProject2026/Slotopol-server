@@ -6,8 +6,8 @@ import (
 	"io"
 	"math"
 
-	"github.com/slotopol/server/game/slot"
-	"github.com/slotopol/server/game/slot/megajack/slotopol"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot/megajack/slotopol"
 )
 
 func CalcStat(ctx context.Context, sp *slot.ScanPar) (float64, float64) {

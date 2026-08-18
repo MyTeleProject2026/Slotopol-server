@@ -4,7 +4,7 @@ package fortymegaslot
 // similar: ct/caveofclovers (difference in bet lines set)
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

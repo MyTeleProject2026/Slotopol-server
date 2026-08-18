@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 func ΣPL(s *slot.StatGeneric) (sum float64) {

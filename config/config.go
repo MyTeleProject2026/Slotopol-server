@@ -11,11 +11,11 @@ import (
 
 var (
 	// compiled binary version, sets by compiler with command
-	//    go build -ldflags="-X 'github.com/slotopol/server/config.BuildVers=%buildvers%'"
+	//    go build -ldflags="-X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=%buildvers%'"
 	BuildVers string
 
 	// compiled binary build date, sets by compiler with command
-	//    go build -ldflags="-X 'github.com/slotopol/server/config.BuildTime=%buildtime%'"
+	//    go build -ldflags="-X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=%buildtime%'"
 	BuildTime string
 )
 

@@ -3,7 +3,7 @@ package triplediamond
 // See: https://www.slotsmate.com/software/igt/triple-diamond
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

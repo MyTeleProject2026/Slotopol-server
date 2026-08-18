@@ -5,9 +5,9 @@ import (
 	_ "embed"
 	"testing"
 
-	"github.com/slotopol/server/game"
-	"github.com/slotopol/server/game/slot"
-	"github.com/slotopol/server/game/slot/novomatic/dolphinspearl"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot/novomatic/dolphinspearl"
 )
 
 // go test -v -bench=^BenchmarkSpin$ -run=^$ -benchmem -count=5 ./game/slot/novomatic/dolphinspearl

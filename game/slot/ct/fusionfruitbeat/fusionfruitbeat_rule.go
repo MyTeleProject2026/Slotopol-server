@@ -3,7 +3,7 @@ package fusionfruitbeat
 // See: https://www.slotsmate.com/software/ct-interactive/fusion-fruit-beat
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

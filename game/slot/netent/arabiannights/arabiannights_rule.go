@@ -3,7 +3,7 @@ package arabiannights
 // See: https://www.slotsmate.com/software/netent/arabian-nights
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

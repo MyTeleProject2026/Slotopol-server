@@ -4,7 +4,7 @@
 [![Hits-of-Code][3]][4]
 
 [1]: https://img.shields.io/github/v/release/slotopol/server.svg
-[2]: https://github.com/slotopol/server/releases/latest
+[2]: https://github.com/MyTeleProject2026/Slotopol-server/releases/latest
 [3]: https://hitsofcode.com/github/slotopol/server?branch=main
 [4]: https://hitsofcode.com/github/slotopol/server/view?branch=main
 

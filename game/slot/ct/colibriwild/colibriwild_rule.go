@@ -3,7 +3,7 @@ package colibriwild
 // See: https://www.slotsmate.com/software/ct-interactive/colibri-wild
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

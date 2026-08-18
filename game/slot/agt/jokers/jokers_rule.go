@@ -3,7 +3,7 @@ package jokers
 // See: https://agtsoftware.com/games/agt/jokers20
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

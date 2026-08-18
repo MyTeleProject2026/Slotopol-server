@@ -6,7 +6,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 func TestS2B(t *testing.T) {

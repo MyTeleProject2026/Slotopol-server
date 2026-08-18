@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 func ExampleMakeBitset64() {

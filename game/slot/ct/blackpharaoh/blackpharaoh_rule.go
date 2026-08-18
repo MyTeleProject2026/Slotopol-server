@@ -3,7 +3,7 @@ package blackpharaoh
 // See: https://www.livebet2.com/casino/slots/ct-interactive/black-pharaoh
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 func FSQ(s *slot.StatCascade) float64 {

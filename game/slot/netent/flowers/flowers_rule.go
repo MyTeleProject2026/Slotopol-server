@@ -4,7 +4,7 @@ package flowers
 // See: https://www.slotsmate.com/software/netent/flowers
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

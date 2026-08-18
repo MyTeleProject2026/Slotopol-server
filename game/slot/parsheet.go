@@ -6,8 +6,8 @@ import (
 	"math"
 	"sort"
 
-	"github.com/slotopol/server/game"
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 	"gopkg.in/yaml.v3"
 )
 

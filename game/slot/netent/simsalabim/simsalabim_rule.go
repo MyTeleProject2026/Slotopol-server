@@ -1,8 +1,8 @@
 package simsalabim
 
 import (
-	"github.com/slotopol/server/game/slot"
-	"github.com/slotopol/server/game/slot/netent/diamonddogs"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot/netent/diamonddogs"
 )
 
 const (

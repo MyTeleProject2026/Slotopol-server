@@ -5,7 +5,7 @@ package purplefruits
 import (
 	_ "embed"
 
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 //go:embed purplefruits_data.yaml

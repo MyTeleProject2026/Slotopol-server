@@ -4,7 +4,7 @@ package jollybelugawhales
 // similar: ct/lucky3penguins, ct/penguinparty
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (

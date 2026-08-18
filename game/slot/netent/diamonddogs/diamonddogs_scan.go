@@ -6,7 +6,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const EVne12 = 3 * 100

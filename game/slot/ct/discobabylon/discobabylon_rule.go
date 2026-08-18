@@ -3,7 +3,7 @@ package discobabylon
 // See: https://www.livebet2.com/casino/slots/ct-interactive/disco-babylon
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (
