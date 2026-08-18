@@ -13,7 +13,6 @@ import (
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
-// Returns bet value.
 func ApiSlotBetGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -53,7 +52,6 @@ func ApiSlotBetGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Set bet value.
 func ApiSlotBetSet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -93,7 +91,6 @@ func ApiSlotBetSet(c *gin.Context) {
 	Ret204(c)
 }
 
-// Returns selected bet lines bitset.
 func ApiSlotSelGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -133,7 +130,6 @@ func ApiSlotSelGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Set selected bet lines bitset.
 func ApiSlotSelSet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -173,7 +169,6 @@ func ApiSlotSelSet(c *gin.Context) {
 	Ret204(c)
 }
 
-// Change game mode depending on the user's choice.
 func ApiSlotModeSet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -213,7 +208,6 @@ func ApiSlotModeSet(c *gin.Context) {
 	Ret204(c)
 }
 
-// Make a spin.
 func ApiSlotSpin(c *gin.Context) {
 	var err error
 	var ok bool
@@ -301,14 +295,13 @@ func ApiSlotSpin(c *gin.Context) {
 	}
 	var bank, fund, _ = club.GetCash()
 
-	// spin until gain less than bank value
 	var wins slot.Wins
 	var gain, debit, jack float64
 	defer wins.Reset()
 	var n = 0
 	game.Prepare()
-	for { // repeat until get valid grid and spin will fit into bank
-		if n++; n > cfg.Cfg.MaxSpinAttempts {
+	for {
+		if n++; n > Cfg.MaxSpinAttempts {
 			Ret500(c, AEC_slot_spin_badbank, ErrBadBank)
 			return
 		}
@@ -329,21 +322,18 @@ func ApiSlotSpin(c *gin.Context) {
 		wins.Reset()
 	}
 
-	// write gain and total bet as transaction
 	if Cfg.ClubUpdateBuffer > 1 {
-		go BankBat[scene.CID].Put(cfg.XormStorage, scene.UID, debit)
-	} else if err = BankBat[scene.CID].Put(cfg.XormStorage, scene.UID, debit); err != nil {
+		go BankBat[scene.CID].Put(XormStorage, scene.UID, debit)
+	} else if err = BankBat[scene.CID].Put(XormStorage, scene.UID, debit); err != nil {
 		Ret500(c, AEC_slot_spin_sqlbank, err)
 		return
 	}
 
-	// make changes to memory data
 	var jprent = cost * jprate / 100
 	club.AddCash(debit, jprent-jack, 0)
 	props.Wallet += gain - cost
 	game.Apply(wins)
 
-	// write spin result to log and get spin ID
 	var sid = SpinCounter.Inc()
 	scene.SID = sid
 	var rec = Spinlog{
@@ -369,13 +359,12 @@ func ApiSlotSpin(c *gin.Context) {
 
 	if Cfg.UseSpinLog {
 		go func() {
-			if err = SpinBuf.Put(cfg.XormSpinlog, rec); err != nil {
+			if err = SpinBuf.Put(XormSpinlog, rec); err != nil {
 				log.Printf("can not write to spin log: %s", err.Error())
 			}
 		}()
 	}
 
-	// prepare result
 	ret.SID = sid
 	ret.Game = game
 	ret.Wins = wins
@@ -387,7 +376,6 @@ func ApiSlotSpin(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Double up gamble on last gain.
 func ApiSlotDoubleup(c *gin.Context) {
 	var err error
 	var ok bool
@@ -459,8 +447,8 @@ func ApiSlotDoubleup(c *gin.Context) {
 	var bank = club.Bank()
 	var mrtp = GetRTP(user, club)
 
-	var win bool       // true on double up is win
-	var upgain float64 // gain by double up
+	var win bool
+	var upgain float64
 	if bank >= risk*arg.Mult {
 		var r = rand.Float64()
 		var side = 1 / arg.Mult * mrtp / 100
@@ -472,21 +460,18 @@ func ApiSlotDoubleup(c *gin.Context) {
 	var debit = risk - upgain
 	var newgain = oldgain - risk + upgain
 
-	// write gain and total bet as transaction
 	if Cfg.ClubUpdateBuffer > 1 {
-		go BankBat[scene.CID].Put(cfg.XormStorage, scene.UID, debit)
-	} else if err = BankBat[scene.CID].Put(cfg.XormStorage, scene.UID, debit); err != nil {
+		go BankBat[scene.CID].Put(XormStorage, scene.UID, debit)
+	} else if err = BankBat[scene.CID].Put(XormStorage, scene.UID, debit); err != nil {
 		Ret500(c, AEC_slot_doubleup_sqlbank, err)
 		return
 	}
 
-	// make changes to memory data
 	club.AddBank(debit)
 	props.Wallet -= debit
 
 	game.SetGain(newgain)
 
-	// write doubleup result to log and get spin ID
 	var id = MultCounter.Inc()
 	if Cfg.UseSpinLog {
 		go func() {
@@ -500,13 +485,12 @@ func ApiSlotDoubleup(c *gin.Context) {
 				Gain:   newgain,
 				Wallet: props.Wallet,
 			}
-			if err = MultBuf.Put(cfg.XormSpinlog, rec); err != nil {
+			if err = MultBuf.Put(XormSpinlog, rec); err != nil {
 				log.Printf("can not write to mult log: %s", err.Error())
 			}
 		}()
 	}
 
-	// prepare result
 	ret.ID = id
 	ret.Win = win
 	ret.Risk = risk
