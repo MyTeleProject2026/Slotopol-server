@@ -14,131 +14,119 @@ import (
 )
 
 type ClubData struct {
-	CID   uint64    `xorm:"pk autoincr" json:"cid" yaml:"cid" xml:"cid,attr"`                                        // club ID
-	CTime time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"` // creation time
-	UTime time.Time `xorm:"updated 'utime' notnull default CURRENT_TIMESTAMP" json:"utime" yaml:"utime" xml:"utime"` // update time
+	CID   uint64    `xorm:"pk autoincr" json:"cid" yaml:"cid" xml:"cid,attr"`
+	CTime time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`
+	UTime time.Time `xorm:"updated 'utime' notnull default CURRENT_TIMESTAMP" json:"utime" yaml:"utime" xml:"utime"`
 	Name  string    `xorm:"notnull" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"`
-	Bank  float64   `xorm:"notnull default 0" json:"bank" yaml:"bank" xml:"bank"`          // users win/lost balance, in coins
-	Fund  float64   `xorm:"notnull default 0" json:"fund" yaml:"fund" xml:"fund"`          // jackpot fund, in coins
-	Lock  float64   `xorm:"notnull default 0" json:"lock" yaml:"lock" xml:"lock"`          // not changed deposit within games
-	Rate  float64   `xorm:"'rate' notnull default 2.5" json:"rate" yaml:"rate" xml:"rate"` // jackpot rate for games with progressive jackpot
-	MRTP  float64   `xorm:"'mrtp' notnull default 0" json:"mrtp" yaml:"mrtp" xml:"mrtp"`   // master RTP
+	Bank  float64   `xorm:"notnull default 0" json:"bank" yaml:"bank" xml:"bank"`
+	Fund  float64   `xorm:"notnull default 0" json:"fund" yaml:"fund" xml:"fund"`
+	Lock  float64   `xorm:"notnull default 0" json:"lock" yaml:"lock" xml:"lock"`
+	Rate  float64   `xorm:"'rate' notnull default 2.5" json:"rate" yaml:"rate" xml:"rate"`
+	MRTP  float64   `xorm:"'mrtp' notnull default 0" json:"mrtp" yaml:"mrtp" xml:"mrtp"`
 }
 
 func (ClubData) TableName() string {
 	return "club"
 }
 
-// Club means independent bank into which gambles some users.
 type Club struct {
 	data ClubData
 	mux  sync.RWMutex
 }
 
-// User flag.
 type UF uint
 
 const (
-	UFactivated UF = 1 << iota // account is activated
-	UFsigncode                 // sign-in required code
+	UFactivated UF = 1 << iota
+	UFsigncode
 )
 
-// User means registration of somebody. Each user can have splitted
-// wallet with some coins balance in each Club. User can opens several
-// games without any limitation.
 type User struct {
-	UID    uint64    `xorm:"pk autoincr" json:"uid" yaml:"uid" xml:"uid,attr"`                                         // user ID
-	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`  // creation time
-	UTime  time.Time `xorm:"updated 'utime' notnull default CURRENT_TIMESTAMP" json:"utime" yaml:"utime" xml:"utime"`  // update time
-	Email  string    `xorm:"notnull unique index" json:"email" yaml:"email" xml:"email"`                               // unique user email
-	Secret string    `xorm:"notnull" json:"secret" yaml:"secret" xml:"secret"`                                         // auth password
-	Name   string    `xorm:"notnull" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"`                 // user name
-	Code   uint32    `xorm:"notnull default 0" json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty"`       // verification code
-	Status UF        `xorm:"notnull default 0" json:"status,omitempty" yaml:"status,omitempty" xml:"status,omitempty"` // account status
-	GAL    AL        `xorm:"notnull default 0" json:"gal,omitempty" yaml:"gal,omitempty" xml:"gal,omitempty"`          // global access level
+	UID    uint64    `xorm:"pk autoincr" json:"uid" yaml:"uid" xml:"uid,attr"`
+	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`
+	UTime  time.Time `xorm:"updated 'utime' notnull default CURRENT_TIMESTAMP" json:"utime" yaml:"utime" xml:"utime"`
+	Email  string    `xorm:"notnull unique index" json:"email" yaml:"email" xml:"email"`
+	Secret string    `xorm:"notnull" json:"secret" yaml:"secret" xml:"secret"`
+	Name   string    `xorm:"notnull" json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"`
+	Code   uint32    `xorm:"notnull default 0" json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty"`
+	Status UF        `xorm:"notnull default 0" json:"status,omitempty" yaml:"status,omitempty" xml:"status,omitempty"`
+	GAL    AL        `xorm:"notnull default 0" json:"gal,omitempty" yaml:"gal,omitempty" xml:"gal,omitempty"`
 	props  util.RWMap[uint64, *Props]
 }
 
-// Story is opened game for user with UID at club with CID.
-// Each instance of game have own GID. Alias - is game type identifier.
 type Story struct {
-	GID   uint64    `xorm:"pk" json:"gid" yaml:"gid" xml:"gid,attr"`                                                 // game ID
-	CID   uint64    `xorm:"notnull" json:"cid" yaml:"cid" xml:"cid,attr"`                                            // club ID
-	UID   uint64    `xorm:"notnull" json:"uid" yaml:"uid" xml:"uid,attr"`                                            // user ID
-	Alias string    `xorm:"notnull" json:"alias" yaml:"alias" xml:"alias"`                                           // game type identifier
-	CTime time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"` // creation time
+	GID   uint64    `xorm:"pk" json:"gid" yaml:"gid" xml:"gid,attr"`
+	CID   uint64    `xorm:"notnull" json:"cid" yaml:"cid" xml:"cid,attr"`
+	UID   uint64    `xorm:"notnull" json:"uid" yaml:"uid" xml:"uid,attr"`
+	Alias string    `xorm:"notnull" json:"alias" yaml:"alias" xml:"alias"`
+	CTime time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`
 }
 
-var StoryCounter atomic.Uint64 // last GID
+var StoryCounter atomic.Uint64
 
-// Scene represents game with all the connected environment.
 type Scene struct {
 	Story `yaml:",inline"`
-	SID   uint64      `json:"sid" yaml:"sid" xml:"sid,attr"` // last spin ID
+	SID   uint64      `json:"sid" yaml:"sid" xml:"sid,attr"`
 	Game  game.Gamble `json:"game" yaml:"game" xml:"game"`
 }
 
-// Access level.
 type AL uint
 
 const (
-	ALmember AL = 1 << iota // user have access to club
-	ALdealer                // can change club game settings and users gameplay
-	ALbooker                // can change user properties and move user money to/from club deposit
-	ALmaster                // can change club bank, fund, deposit
-	ALadmin                 // can change same access levels to other users
-	ALall    = ALmember | ALdealer | ALbooker | ALmaster | ALadmin
+	ALmember AL = 1 << iota
+	ALdealer
+	ALbooker
+	ALmaster
+	ALadmin
+	ALall = ALmember | ALdealer | ALbooker | ALmaster | ALadmin
 )
 
-// Props contains properties for user at some club.
-// Any property can be zero by default, or if object does not created at DB.
 type Props struct {
-	CID    uint64    `xorm:"notnull index(bid)" json:"cid" yaml:"cid" xml:"cid,attr"`                                 // club ID
-	UID    uint64    `xorm:"notnull index(bid)" json:"uid" yaml:"uid" xml:"uid,attr"`                                 // user ID
-	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"` // creation time
-	UTime  time.Time `xorm:"updated 'utime' notnull default CURRENT_TIMESTAMP" json:"utime" yaml:"utime" xml:"utime"` // update time
-	Wallet float64   `xorm:"notnull default 0" json:"wallet" yaml:"wallet" xml:"wallet"`                              // in coins
-	Access AL        `xorm:"notnull default 0" json:"access" yaml:"access" xml:"access"`                              // access level
-	MRTP   float64   `xorm:"notnull default 0" json:"mrtp" yaml:"mrtp" xml:"mrtp"`                                    // personal master RTP
+	CID    uint64    `xorm:"notnull index(bid)" json:"cid" yaml:"cid" xml:"cid,attr"`
+	UID    uint64    `xorm:"notnull index(bid)" json:"uid" yaml:"uid" xml:"uid,attr"`
+	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`
+	UTime  time.Time `xorm:"updated 'utime' notnull default CURRENT_TIMESTAMP" json:"utime" yaml:"utime" xml:"utime"`
+	Wallet float64   `xorm:"notnull default 0" json:"wallet" yaml:"wallet" xml:"wallet"`
+	Access AL        `xorm:"notnull default 0" json:"access" yaml:"access" xml:"access"`
+	MRTP   float64   `xorm:"notnull default 0" json:"mrtp" yaml:"mrtp" xml:"mrtp"`
 }
 
-// Properties master for new registered user.
 var PropMaster []Props
 
 type Spinlog struct {
-	SID    uint64    `xorm:"pk" json:"sid" yaml:"sid" xml:"sid,attr"`                                                 // spin ID
-	GID    uint64    `xorm:"notnull" json:"gid" yaml:"gid" xml:"gid,attr"`                                            // game ID
-	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"` // creation time
-	MRTP   float64   `xorm:"notnull" json:"mrtp" yaml:"mrtp" xml:"mrtp,attr"`                                         // master RTP
-	Game   string    `xorm:"notnull" json:"game" yaml:"game" xml:"game"`                                              // game data
-	Wins   string    `xorm:"text" json:"wins,omitempty" yaml:"wins,omitempty" xml:"wins,omitempty"`                   // list of wins marshaled to JSON
-	Gain   float64   `xorm:"notnull" json:"gain" yaml:"gain" xml:"gain"`                                              // total gain at last spin
+	SID    uint64    `xorm:"pk" json:"sid" yaml:"sid" xml:"sid,attr"`
+	GID    uint64    `xorm:"notnull" json:"gid" yaml:"gid" xml:"gid,attr"`
+	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`
+	MRTP   float64   `xorm:"notnull" json:"mrtp" yaml:"mrtp" xml:"mrtp,attr"`
+	Game   string    `xorm:"notnull" json:"game" yaml:"game" xml:"game"`
+	Wins   string    `xorm:"text" json:"wins,omitempty" yaml:"wins,omitempty" xml:"wins,omitempty"`
+	Gain   float64   `xorm:"notnull" json:"gain" yaml:"gain" xml:"gain"`
 	Wallet float64   `xorm:"notnull" json:"wallet" yaml:"wallet" xml:"wallet"`
 }
 
-var SpinCounter atomic.Uint64 // last spin log ID
+var SpinCounter atomic.Uint64
 
 type Multlog struct {
 	ID     uint64    `xorm:"pk" json:"id" yaml:"id" xml:"id,attr"`
-	GID    uint64    `xorm:"notnull" json:"gid" yaml:"gid" xml:"gid,attr"` // game ID
+	GID    uint64    `xorm:"notnull" json:"gid" yaml:"gid" xml:"gid,attr"`
 	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`
-	MRTP   float64   `xorm:"notnull" json:"mrtp" yaml:"mrtp" xml:"mrtp,attr"`  // master RTP
-	Mult   float64   `xorm:"notnull" json:"mult" yaml:"mult" xml:"mult"`       // multiplier
-	Risk   float64   `xorm:"notnull" json:"risk" yaml:"risk" xml:"risk"`       // the amount that is being gambled out
-	Win    bool      `xorm:"notnull" json:"win" yaml:"win" xml:"win"`          // double up is win
-	Gain   float64   `xorm:"notnull" json:"gain" yaml:"gain" xml:"gain"`       // total gain after double up
-	Wallet float64   `xorm:"notnull" json:"wallet" yaml:"wallet" xml:"wallet"` // wallet after double up
+	MRTP   float64   `xorm:"notnull" json:"mrtp" yaml:"mrtp" xml:"mrtp,attr"`
+	Mult   float64   `xorm:"notnull" json:"mult" yaml:"mult" xml:"mult"`
+	Risk   float64   `xorm:"notnull" json:"risk" yaml:"risk" xml:"risk"`
+	Win    bool      `xorm:"notnull" json:"win" yaml:"win" xml:"win"`
+	Gain   float64   `xorm:"notnull" json:"gain" yaml:"gain" xml:"gain"`
+	Wallet float64   `xorm:"notnull" json:"wallet" yaml:"wallet" xml:"wallet"`
 }
 
-var MultCounter atomic.Uint64 // last multiplier log ID
+var MultCounter atomic.Uint64
 
 type Walletlog struct {
 	ID     uint64    `xorm:"pk autoincr" json:"id" yaml:"id" xml:"id,attr"`
-	CID    uint64    `xorm:"notnull index(bid)" json:"cid" yaml:"cid" xml:"cid,attr"`                                 // club ID
-	UID    uint64    `xorm:"notnull index(bid)" json:"uid" yaml:"uid" xml:"uid,attr"`                                 // user ID
-	AID    uint64    `xorm:"notnull" json:"aid" yaml:"aid" xml:"aid"`                                                 // admin ID
-	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"` // creation time
-	Wallet float64   `xorm:"notnull" json:"wallet" yaml:"wallet" xml:"wallet"`                                        // new value in coins
+	CID    uint64    `xorm:"notnull index(bid)" json:"cid" yaml:"cid" xml:"cid,attr"`
+	UID    uint64    `xorm:"notnull index(bid)" json:"uid" yaml:"uid" xml:"uid,attr"`
+	AID    uint64    `xorm:"notnull" json:"aid" yaml:"aid" xml:"aid"`
+	CTime  time.Time `xorm:"created 'ctime' notnull default CURRENT_TIMESTAMP" json:"ctime" yaml:"ctime" xml:"ctime"`
+	Wallet float64   `xorm:"notnull" json:"wallet" yaml:"wallet" xml:"wallet"`
 	Sum    float64   `xorm:"notnull" json:"sum" yaml:"sum" xml:"sum"`
 }
 
@@ -153,13 +141,8 @@ type Banklog struct {
 	LockSum float64   `xorm:"notnull 'locksum'" json:"locksum" yaml:"locksum" xml:"locksum" form:"locksum"`
 }
 
-// All created clubs, by CID.
 var Clubs util.RWMap[uint64, *Club]
-
-// All registered users, by UID.
 var Users util.RWMap[uint64, *User]
-
-// Scenes cache, by GID.
 var Scenes util.RWMap[uint64, *Scene]
 
 func MakeClub(cd ClubData) *Club {
@@ -172,7 +155,7 @@ func (club *Club) Get() ClubData {
 	return club.data
 }
 
-func (club *Club) CID() uint64 { // read only
+func (club *Club) CID() uint64 {
 	return club.data.CID
 }
 
@@ -279,9 +262,6 @@ func (user *User) InsertProps(props *Props) {
 	user.props.Set(props.CID, props)
 }
 
-// GetAdmin returns User pointer for authorized requests,
-// and access level for it. Or nil pointer for unauthorized requests.
-// It called after Auth(false) middleware.
 func GetAdmin(c *gin.Context, cid uint64) (*User, AL) {
 	if value, exists := c.Get(userKey); exists {
 		var admin = value.(*User)
@@ -290,9 +270,6 @@ func GetAdmin(c *gin.Context, cid uint64) (*User, AL) {
 	return nil, 0
 }
 
-// MustAdmin always returns User pointer for authorized
-// requests, and access level for it.
-// It called after Auth(true) middleware.
 func MustAdmin(c *gin.Context, cid uint64) (*User, AL) {
 	var admin = c.MustGet(userKey).(*User)
 	return admin, admin.GAL | admin.GetAL(cid)
@@ -307,7 +284,7 @@ func GetRTP(user *User, club *Club) float64 {
 	if mrtp := club.MRTP(); mrtp != 0 {
 		return mrtp
 	}
-	return cfg.DefMRTP // default master RTP if no others found
+	return config.DefMRTP // default master RTP
 }
 
 func GetScene(gid uint64) (scene *Scene, err error) {
@@ -317,7 +294,7 @@ func GetScene(gid uint64) (scene *Scene, err error) {
 	}
 
 	var tmp Scene
-	if ok, _ = cfg.XormStorage.ID(gid).Get(&tmp.Story); !ok {
+	if ok, _ = XormStorage.ID(gid).Get(&tmp.Story); !ok {
 		err = ErrNotOpened
 		return
 	}
@@ -336,7 +313,7 @@ func GetScene(gid uint64) (scene *Scene, err error) {
 	}
 
 	var rec Spinlog
-	if ok, _ = cfg.XormSpinlog.Where("gid = ?", gid).Desc("ctime").Get(&rec); !ok {
+	if ok, _ = XormSpinlog.Where("gid = ?", gid).Desc("ctime").Get(&rec); !ok {
 		return
 	}
 	scene.SID = rec.SID
