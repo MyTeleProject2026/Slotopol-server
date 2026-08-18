@@ -16,6 +16,6 @@ go build -o "$GOPATH/bin/slot_win_x86.exe" -v\
  -tags="jsoniter prod full"\
  -buildvcs=false\
  -trimpath -ldflags="-w -s -linkmode external -extldflags -static\
- -X 'github.com/slotopol/server/config.BuildVers=$buildvers'\
- -X 'github.com/slotopol/server/config.BuildTime=$buildtime'"\
+ -X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers'\
+ -X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=$buildtime'"\
  $wd
