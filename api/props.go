@@ -4,9 +4,9 @@ import (
 	"encoding/xml"
 
 	"github.com/gin-gonic/gin"
-	"github.com/MyTeleProject2026/Slotopol-server/config"
 )
 
+// ApiPropsGet returns all properties for a user at a club.
 func ApiPropsGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -23,26 +23,26 @@ func ApiPropsGet(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_prop_get_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok {
-		Ret404(c, AEC_prop_get_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_prop_get_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if admin != user && al&ALbooker == 0 {
-		Ret403(c, AEC_prop_get_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -55,6 +55,7 @@ func ApiPropsGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiPropsWalletGet returns balance at wallet for a user at a club.
 func ApiPropsWalletGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -69,26 +70,26 @@ func ApiPropsWalletGet(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_prop_walletget_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok {
-		Ret404(c, AEC_prop_walletget_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_prop_walletget_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if admin != user && al&ALbooker == 0 {
-		Ret403(c, AEC_prop_walletget_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -97,6 +98,7 @@ func ApiPropsWalletGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiPropsWalletAdd adds (or removes) coins from a user's wallet.
 func ApiPropsWalletAdd(c *gin.Context) {
 	var err error
 	var ok bool
@@ -112,50 +114,52 @@ func ApiPropsWalletAdd(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_prop_walletadd_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 	if arg.Sum > Cfg.AdjunctLimit || arg.Sum < -Cfg.AdjunctLimit {
-		Ret400(c, AEC_prop_walletadd_limit, ErrTooBig)
+		Ret400(c, 0, ErrTooBig)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok {
-		Ret404(c, AEC_prop_walletadd_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_prop_walletadd_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if al&ALbooker == 0 {
-		Ret403(c, AEC_prop_walletadd_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
 	var props *Props
 	if props, ok = user.props.Get(arg.CID); !ok {
-		Ret500(c, AEC_prop_walletadd_noprops, ErrNoProps)
+		Ret500(c, 0, ErrNoProps)
 		return
 	}
 	if props.Wallet+arg.Sum < 0 {
-		Ret403(c, AEC_prop_walletadd_nomoney, ErrNoMoney)
+		Ret403(c, 0, ErrNoMoney)
 		return
 	}
 
+	// Update wallet as transaction
 	if Cfg.ClubInsertBuffer > 1 {
 		go BankBat[arg.CID].Add(XormStorage, arg.UID, admin.UID, props.Wallet+arg.Sum, arg.Sum)
 	} else if err = BankBat[arg.CID].Add(XormStorage, arg.UID, admin.UID, props.Wallet+arg.Sum, arg.Sum); err != nil {
-		Ret500(c, AEC_prop_walletadd_sql, err)
+		Ret500(c, 0, err)
 		return
 	}
 
+	// Make changes to memory data
 	props.Wallet += arg.Sum
 
 	ret.Wallet = props.Wallet
@@ -163,6 +167,7 @@ func ApiPropsWalletAdd(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiPropsAlGet returns personal access level for a user at a club.
 func ApiPropsAlGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -178,26 +183,26 @@ func ApiPropsAlGet(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_prop_alget_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok && !arg.All {
-		Ret404(c, AEC_prop_alget_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_prop_alget_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if admin != user && al&(ALbooker+ALadmin) == 0 {
-		Ret403(c, AEC_prop_alget_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -209,6 +214,7 @@ func ApiPropsAlGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiPropsAlSet sets personal access level for a user at a club.
 func ApiPropsAlSet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -220,52 +226,55 @@ func ApiPropsAlSet(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_prop_alset_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok {
-		Ret404(c, AEC_prop_alset_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_prop_alset_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if al&ALadmin == 0 {
-		Ret403(c, AEC_prop_alset_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 	_ = admin
 
 	var props *Props
 	if props, ok = user.props.Get(arg.CID); !ok {
-		Ret500(c, AEC_prop_alset_noprops, ErrNoProps)
+		Ret500(c, 0, ErrNoProps)
 		return
 	}
 	if al&arg.Access != arg.Access {
-		Ret403(c, AEC_prop_alset_nolevel, ErrNoLevel)
+		Ret403(c, 0, ErrNoLevel)
 		return
 	}
 
+	// Update access level as transaction
 	if Cfg.ClubInsertBuffer > 1 {
 		go BankBat[arg.CID].Access(XormStorage, arg.UID, arg.Access)
 	} else if err = BankBat[arg.CID].Access(XormStorage, arg.UID, arg.Access); err != nil {
-		Ret500(c, AEC_prop_rtpset_sql, err)
+		Ret500(c, 0, err)
 		return
 	}
 
+	// Make changes to memory data
 	props.Access = arg.Access
 
 	Ret204(c)
 }
 
+// ApiPropsRtpGet returns master RTP for a user at a club.
 func ApiPropsRtpGet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -281,26 +290,26 @@ func ApiPropsRtpGet(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_prop_rtpget_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok {
-		Ret404(c, AEC_prop_rtpget_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok && !arg.All {
-		Ret404(c, AEC_prop_rtpget_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if admin != user && al&ALbooker == 0 {
-		Ret403(c, AEC_prop_rtpget_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
@@ -313,6 +322,7 @@ func ApiPropsRtpGet(c *gin.Context) {
 	RetOk(c, ret)
 }
 
+// ApiPropsRtpSet sets personal master RTP for a user at a club.
 func ApiPropsRtpSet(c *gin.Context) {
 	var err error
 	var ok bool
@@ -324,43 +334,45 @@ func ApiPropsRtpSet(c *gin.Context) {
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
-		Ret400(c, AEC_prop_rtpset_nobind, err)
+		Ret400(c, 0, err)
 		return
 	}
 
 	var club *Club
 	if club, ok = Clubs.Get(arg.CID); !ok {
-		Ret404(c, AEC_prop_rtpset_noclub, ErrNoClub)
+		Ret404(c, 0, ErrNoClub)
 		return
 	}
 	_ = club
 
 	var user *User
 	if user, ok = Users.Get(arg.UID); !ok {
-		Ret404(c, AEC_prop_rtpset_nouser, ErrNoUser)
+		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
 	var admin, al = MustAdmin(c, arg.CID)
 	if al&ALbooker == 0 {
-		Ret403(c, AEC_prop_rtpset_noaccess, ErrNoAccess)
+		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 	_ = admin
 
 	var props *Props
 	if props, ok = user.props.Get(arg.CID); !ok {
-		Ret500(c, AEC_prop_rtpset_noprops, ErrNoProps)
+		Ret500(c, 0, ErrNoProps)
 		return
 	}
 
+	// Update master RTP as transaction
 	if Cfg.ClubInsertBuffer > 1 {
 		go BankBat[arg.CID].MRTP(XormStorage, arg.UID, arg.MRTP)
 	} else if err = BankBat[arg.CID].MRTP(XormStorage, arg.UID, arg.MRTP); err != nil {
-		Ret500(c, AEC_prop_rtpset_sql, err)
+		Ret500(c, 0, err)
 		return
 	}
 
+	// Make changes to memory data
 	props.MRTP = arg.MRTP
 
 	Ret204(c)
