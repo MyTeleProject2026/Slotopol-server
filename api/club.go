@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 
 	"github.com/gin-gonic/gin"
-	"github.com/slotopol/server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
 )
 
 const (
