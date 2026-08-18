@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/slotopol/server/config"
-	"github.com/slotopol/server/game/slot"
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 // Returns bet value.
