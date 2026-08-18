@@ -1,102 +1,64 @@
 package api
 
 import (
-	"errors"
-	"os"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/MyTeleProject2026/Slotopol-server/config"
-	"github.com/MyTeleProject2026/Slotopol-server/util"
-
 	"github.com/gin-gonic/gin"
-	"github.com/klauspost/cpuid/v2"
-	"github.com/schwarzlichtbezirk/go-disk-usage/du"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/schwarzlichtbezirk/go-disk-usage"
 )
 
-var (
-	ErrDiskInfo = errors.New("can not obtain disk info")
-)
-
-func isRunningInContainer() bool {
-	if _, err := os.Stat("/.dockerenv"); err != nil {
-		return false // File does not exist, not running in Docker or an error occurred
-	}
-	return true // File exists, likely running in Docker
-}
-
-// save server start time
-var starttime = time.Now()
-
-// cached service info response
-var srvinfo gin.H // lazy init
-
-// Check service response.
+// ApiPing is a simple health check.
 func ApiPing(c *gin.Context) {
-	RetOk(c, nil)
+	RetOk(c, gin.H{"ping": "pong"})
 }
 
-// Static service system information.
+// ApiServInfo returns server version and build info.
 func ApiServInfo(c *gin.Context) {
-	if srvinfo == nil {
-		srvinfo = gin.H{
-			// this service
-			"buildvers": cfg.BuildVers,
-			"buildtime": cfg.BuildTime,
-			"started":   starttime.Format(time.RFC3339),
-			// Go version & OS
-			"govers":   runtime.Version(),
-			"os":       runtime.GOOS,
-			"arch":     runtime.GOARCH,
-			"indocker": isRunningInContainer(),
-			"maxprocs": runtime.GOMAXPROCS(0),
-			// CPU
-			"cpubrand": cpuid.CPU.BrandName,
-			"cpuvend":  cpuid.CPU.VendorString,
-			"cpuphys":  cpuid.CPU.PhysicalCores,
-			"cpulogic": cpuid.CPU.LogicalCores,
-			"cpufreq":  cpuid.CPU.Hz,
-			"cpufeat":  strings.Join(cpuid.CPU.FeatureSet(), ","),
-			// paths
-			"exepath": util.ToSlash(cfg.ExePath),
-			"cfgpath": util.ToSlash(cfg.CfgPath),
-			"sqlpath": util.ToSlash(cfg.SqlPath),
-		}
-	}
-	RetOk(c, srvinfo)
+	RetOk(c, gin.H{
+		"version":   config.BuildVers,
+		"built":     config.BuildTime,
+		"goos":      runtime.GOOS,
+		"goarch":    runtime.GOARCH,
+		"goversion": runtime.Version(),
+	})
 }
 
-// Memory usage footprint.
+// ApiMemUsage returns memory statistics.
 func ApiMemUsage(c *gin.Context) {
-	var mem runtime.MemStats
-	runtime.ReadMemStats(&mem)
-
-	var ret = gin.H{
-		"running":       time.Since(starttime) / time.Millisecond,
-		"heapalloc":     mem.HeapAlloc,
-		"heapsys":       mem.HeapSys,
-		"totalalloc":    mem.TotalAlloc,
-		"nextgc":        mem.NextGC,
-		"numgc":         mem.NumGC,
-		"pausetotalns":  mem.PauseTotalNs,
-		"gccpufraction": mem.GCCPUFraction,
-	}
-	RetOk(c, ret)
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	RetOk(c, gin.H{
+		"alloc":       m.Alloc,
+		"total_alloc": m.TotalAlloc,
+		"sys":         m.Sys,
+		"num_gc":      m.NumGC,
+		"heap_alloc":  m.HeapAlloc,
+		"heap_sys":    m.HeapSys,
+		"heap_idle":   m.HeapIdle,
+		"heap_inuse":  m.HeapInuse,
+		"stack_inuse": m.StackInuse,
+	})
 }
 
+// ApiDiskUsage returns disk usage information.
 func ApiDiskUsage(c *gin.Context) {
-	var ds = du.NewDiskUsage(cfg.SqlPath)
-	if ds == nil {
-		Ret500(c, AEC_diskusage_nil, ErrDiskInfo)
+	var path = "."
+	if Cfg.CfgPath != "" {
+		path = Cfg.CfgPath
+	}
+	usage, err := diskusage.New(path)
+	if err != nil {
+		Ret500(c, 0, err)
 		return
 	}
-	var ret = gin.H{
-		"size":      ds.Size(),
-		"used":      ds.Used(),
-		"free":      ds.Free(),
-		"available": ds.Available(),
-		"usage":     ds.Usage(),
-	}
-	RetOk(c, ret)
+	RetOk(c, gin.H{
+		"path":      path,
+		"total":     usage.Size(),
+		"free":      usage.Free(),
+		"available": usage.Available(),
+		"used":      usage.Used(),
+		"usage":     usage.Usage(),
+	})
 }
