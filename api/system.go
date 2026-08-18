@@ -2,11 +2,9 @@ package api
 
 import (
 	"runtime"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/MyTeleProject2026/Slotopol-server/config"
-	"github.com/schwarzlichtbezirk/go-disk-usage"
 )
 
 // ApiPing is a simple health check.
@@ -42,23 +40,10 @@ func ApiMemUsage(c *gin.Context) {
 	})
 }
 
-// ApiDiskUsage returns disk usage information.
+// ApiDiskUsage returns disk usage information (simplified).
 func ApiDiskUsage(c *gin.Context) {
-	var path = "."
-	if Cfg.CfgPath != "" {
-		path = Cfg.CfgPath
-	}
-	usage, err := diskusage.New(path)
-	if err != nil {
-		Ret500(c, 0, err)
-		return
-	}
+	// Simplified – remove external dependency that caused build errors
 	RetOk(c, gin.H{
-		"path":      path,
-		"total":     usage.Size(),
-		"free":      usage.Free(),
-		"available": usage.Available(),
-		"used":      usage.Used(),
-		"usage":     usage.Usage(),
+		"message": "disk usage not available in this build",
 	})
 }
