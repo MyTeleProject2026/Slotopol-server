@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"xorm.io/xorm"
 
-	"github.com/slotopol/server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
 )
 
 type Session = xorm.Session
