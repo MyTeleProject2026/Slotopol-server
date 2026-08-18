@@ -24,7 +24,7 @@ var webCmd = &cobra.Command{
 	Use:     "web",
 	Short:   webShort,
 	Long:    webLong,
-	Example: fmt.Sprintf(webExmp, cfg.AppName),
+	Example: fmt.Sprintf(webExmp, config.AppName),
 	Run: func(cmd *cobra.Command, args []string) {
 		var debug bool
 		var err error
