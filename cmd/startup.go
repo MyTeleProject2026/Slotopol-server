@@ -1,404 +1,198 @@
 package cmd
 
 import (
-	"bytes"
-	"context"
-	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"log"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
-	"time"
+	"runtime"
 
-	"github.com/MyTeleProject2026/Slotopol-server/api"
 	"github.com/MyTeleProject2026/Slotopol-server/config"
 	"github.com/MyTeleProject2026/Slotopol-server/game"
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
-	"gopkg.in/yaml.v3"
-	"xorm.io/xorm"
-	"xorm.io/xorm/names"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-var (
-	Cfg = cfg.Cfg // shortcut
-)
+const scanShort = "Slots games reels scanning by brute force or by Monte Carlo"
+const scanLong = `Calculate RTP (Return to Player) percentage for specified slot game reels by brute force method ("scan" or "bf" command) or by Monte Carlo method ("mc" command).`
+const scanExmp = `Scan reels for "Slotopol" game for reels set nearest to 100%%:
+  %[1]s scan --game=megajack/slotopol -rtp=100
+Scan reels for "Dolphins Pearl" game for reels sets nearest to 92%% with 10 selected lines:
+  %[1]s bf -g="Novomatic / Dolphins Pearl" -r=92 -l=10
+Scan reels with using Monte Carlo method for "Sizzling Hot" game for reels sets nearest to 95.5%% with 5 selected lines and expected precision 0.1%%:
+  %[1]s mc -g="Novomatic / Sizzling Hot" -r=95.5 -l=5 --prec=0.1`
 
-var (
-	ErrNoClubName = errors.New("name of 'club' database does not provided at data source name")
-	ErrNoSpinName = errors.New("name of 'spin' database does not provided at data source name")
-)
-
-func Startup() (exitctx context.Context) {
-	//var cancel context.CancelFunc
-	exitctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		// Make exit signal on function exit.
-		defer cancel()
-
-		var sigint = make(chan os.Signal, 1)
-		var sigterm = make(chan os.Signal, 1)
-		// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C) or SIGTERM (Ctrl+/)
-		// SIGKILL, SIGQUIT will not be caught.
-		signal.Notify(sigint, syscall.SIGINT)
-		signal.Notify(sigterm, syscall.SIGTERM)
-		// Block until we receive our signal.
-		select {
-		case <-exitctx.Done():
-			if errors.Is(exitctx.Err(), context.DeadlineExceeded) {
-				log.Println("shutting down by timeout")
-			} else if errors.Is(exitctx.Err(), context.Canceled) {
-				log.Println("shutting down by cancel")
-			} else {
-				log.Printf("shutting down by %s\n", exitctx.Err().Error())
-			}
-		case <-sigint:
-			log.Println("shutting down by break")
-		case <-sigterm:
-			log.Println("shutting down by process termination")
-		}
-		signal.Stop(sigint)
-		signal.Stop(sigterm)
-	}()
-	return
-}
-
-// Load data from embed yaml chunks.
-func LoadInternalYaml(ctx context.Context) {
-	var t0 = time.Now()
-	var size int
-	for _, b := range game.LoadMap {
-		if ctx.Err() != nil {
-			return
-		}
-		game.MustReadChain(bytes.NewReader(b))
-		size += len(b)
-	}
-	var d = time.Since(t0)
-	if cfg.Verbose {
-		log.Printf("loaded %d embedded yaml files in %s on %d bytes\n", len(game.LoadMap), d.String(), size)
-	}
-}
-
-func LoadYamlFromFile(fullpath string) (err error) {
-	if ext := util.ToLower(filepath.Ext(fullpath)); ext != ".yaml" && ext != ".yml" {
-		return nil
-	}
-	var r io.ReadCloser
-	if r, err = os.Open(fullpath); err != nil {
-		return err
-	}
-	defer r.Close()
-	if err = game.ReadChain(r); err != nil {
-		return fmt.Errorf("can not read data from %s: %w", fullpath, err)
-	}
-	if cfg.Verbose {
-		log.Printf("loaded data from: %s\n", fullpath)
-	}
-	return nil
-}
-
-// Load data from extermal yaml files.
-func LoadExternalYaml(ctx context.Context) (err error) {
-	for _, root := range cfg.ObjPath {
-		root, _ = util.ExpandHomePath(root)
-		var isdir bool
-		if isdir, err = cfg.DirExists(root); err != nil {
-			return
-		}
-		if !isdir {
-			return LoadYamlFromFile(root)
-		}
-		err = fs.WalkDir(os.DirFS(root), ".", func(fpath string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if err = ctx.Err(); err != nil {
-				return err
-			}
-			if d.IsDir() {
-				return nil
-			}
-			var fullpath = filepath.Join(root, fpath)
-			return LoadYamlFromFile(fullpath)
-		})
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
-func UpdateAlgList() {
-	for _, ai := range game.AlgList {
-		if ai.Update != nil {
-			ai.Update(ai)
-		}
-	}
-}
-
-func CheckAlgList() {
-	for _, ai := range game.AlgList {
-		if len(ai.RTP) == 0 {
-			var id string
-			if len(ai.Aliases) > 0 {
-				id = ai.Aliases[0].ID()
-			}
-			panic(fmt.Errorf("RTP list does not complete for %s", id))
-		}
-	}
-}
-
-func InitStorage() (err error) {
-	switch Cfg.DriverName {
-	case "sqlite3":
-		var fpath string
-		if Cfg.ClubSourceName != ":memory:" {
-			fpath = util.JoinPath(cfg.SqlPath, Cfg.ClubSourceName)
-		} else {
-			fpath = Cfg.ClubSourceName
-		}
-		if cfg.XormStorage, err = xorm.NewEngine(Cfg.DriverName, fpath); err != nil {
-			return
-		}
-		if Cfg.ClubSourceName != ":memory:" {
-			log.Println("club db: sqlite")
-		} else {
-			log.Println("club db: memory")
-		}
-
-	case "mysql", "postgres":
-		if cfg.XormStorage, err = xorm.NewEngine(Cfg.DriverName, Cfg.ClubSourceName); err != nil {
-			return
-		}
-		log.Printf("club db: %s\n", Cfg.DriverName)
-	}
-	cfg.XormStorage.SetMapper(names.GonicMapper{})
-
-	var session = cfg.XormStorage.NewSession()
-	defer session.Close()
-
-	if err = session.Sync(
-		&api.ClubData{}, &api.User{}, &api.Props{},
-		&api.Story{}, api.Walletlog{}, api.Banklog{},
-	); err != nil {
-		return
-	}
-
+func SetupParSheet(pf *pflag.FlagSet, sp *game.ScanPar, gi *game.GameInfo) (err error) {
 	var ok bool
-	if ok, err = session.IsTableEmpty(&api.ClubData{}); err != nil {
+
+	var tn int
+	if tn, err = pf.GetInt("mt"); err != nil {
 		return
 	}
-	if ok {
-		var body []byte
-		if body, err = os.ReadFile(util.JoinFilePath(cfg.CfgPath, "slot-clubinit.sql")); err != nil {
-			log.Printf("can not open SQL-file with initial settings: %s", err.Error())
-			err = nil // remove error
-		}
-		var list = bytes.Split(body, []byte{';'})
-		for _, cmd := range list {
-			if cmd = bytes.TrimSpace(cmd); len(cmd) > 0 {
-				if _, err = session.Exec(util.B2S(cmd)); err != nil {
-					return
-				}
-			}
-		}
+	if tn < 1 {
+		tn = runtime.GOMAXPROCS(0)
 	}
+	sp.TN = tn
 
-	// Read properies master for new registered user
-	var body []byte
-	if body, err = os.ReadFile(util.JoinFilePath(cfg.CfgPath, "slot-newuser.yaml")); err != nil {
-		log.Printf("can not open YAML-file with properties initialization for new user: %s", err.Error())
-		err = nil // remove error
-	} else if err = yaml.Unmarshal(body, &api.PropMaster); err != nil {
-		log.Printf("can not unmarshal 'slot-newuser.yaml': %s", err.Error())
-		err = nil // remove error
-	}
-
-	const limit = 256
-
-	var offset = 0
-	for {
-		var chunk []api.ClubData
-		if err = session.Limit(limit, offset).Find(&chunk); err != nil {
-			return
-		}
-		offset += limit
-		for _, cd := range chunk {
-			api.Clubs.Set(cd.CID, api.MakeClub(cd))
-			var bat = &api.SqlBank{}
-			bat.Init(cd.CID, Cfg.ClubUpdateBuffer, Cfg.ClubInsertBuffer)
-			api.BankBat[cd.CID] = bat
-		}
-		if limit > len(chunk) {
-			break
-		}
-	}
-	log.Printf("loaded %d clubs\n", api.Clubs.Len())
-
-	offset = 0
-	for {
-		var chunk []*api.User
-		if err = session.Limit(limit, offset).Find(&chunk); err != nil {
-			return
-		}
-		offset += limit
-		for _, user := range chunk {
-			user.Init()
-			api.Users.Set(user.UID, user)
-		}
-		if limit > len(chunk) {
-			break
-		}
-	}
-	log.Printf("loaded %d users\n", api.Users.Len())
-
-	offset = 0
-	for {
-		var chunk []*api.Props
-		if err = session.Limit(limit, offset).Find(&chunk); err != nil {
-			return
-		}
-		offset += limit
-		for _, props := range chunk {
-			if !api.Clubs.Has(props.CID) {
-				return fmt.Errorf("found props without club linkage, UID=%d, CID=%d, value=%g", props.UID, props.CID, props.Wallet)
-			}
-			var user, ok = api.Users.Get(props.UID)
-			if !ok {
-				return fmt.Errorf("found props without user linkage, UID=%d, CID=%d, value=%g", props.UID, props.CID, props.Wallet)
-			}
-			user.InsertProps(props)
-		}
-		if limit > len(chunk) {
-			break
-		}
-	}
-
-	var i64 int64
-	if i64, err = session.Count(&api.Story{}); err != nil {
+	if sp.MRTP, err = pf.GetFloat64("rtp"); err != nil {
 		return
 	}
-	api.StoryCounter.Store(uint64(i64))
 
-	api.JoinBuf.Init(Cfg.ClubInsertBuffer)
-	return
-}
-
-func InitSpinlog() (err error) {
-	switch Cfg.DriverName {
-	case "sqlite3":
-		var fpath string
-		if Cfg.SpinSourceName != ":memory:" {
-			fpath = util.JoinPath(cfg.SqlPath, Cfg.SpinSourceName)
-		} else {
-			fpath = Cfg.SpinSourceName
-		}
-		if cfg.XormSpinlog, err = xorm.NewEngine(Cfg.DriverName, fpath); err != nil {
+	if gi.LNum > 0 {
+		var sel int
+		if sel, err = pf.GetInt("sel"); err != nil {
 			return
 		}
-		if Cfg.ClubSourceName != ":memory:" {
-			log.Println("spin db: sqlite")
-		} else {
-			log.Println("spin db: memory")
+		if sel == 0 {
+			sel = gi.LNum
+		} else if sel > gi.LNum {
+			return fmt.Errorf("number of selected bet lines is greater than maximum number %d in game %s", gi.LNum, gi.ID())
 		}
+		if sel != gi.LNum && (gi.GP&game.GPcasc != 0) {
+			return fmt.Errorf("can not change number of selected lines %d on cascade slot %s", gi.LNum, gi.ID())
+		}
+		sp.Sel = sel
+	}
 
-	case "mysql", "postgres":
-		if cfg.XormSpinlog, err = xorm.NewEngine(Cfg.DriverName, Cfg.SpinSourceName); err != nil {
+	var c float64
+	if c, err = pf.GetFloat64("conf"); err != nil {
+		return
+	}
+	sp.Conf = c / 100
+
+	var t uint64
+	if t, err = pf.GetUint64("total"); err != nil {
+		return
+	}
+	sp.Total = t * 1e6
+
+	var p float64
+	if p, err = pf.GetFloat64("prec"); err != nil {
+		return
+	}
+	sp.Prec = p / 100
+
+	var pfm = map[string]uint{
+		"main":   game.PF_main,
+		"jack":   game.PF_jack,
+		"fg":     game.PF_fg,
+		"vi":     game.PF_vi,
+		"ci":     game.PF_ci,
+		"spread": game.PF_spread,
+		"casc":   game.PF_casc,
+		"sym":    game.PF_sym,
+		"raw":    game.PF_raw,
+		"full":   0xffff &^ game.PF_raw,
+	}
+	for sf, uf := range pfm {
+		if ok, err = pf.GetBool(sf); err != nil {
 			return
 		}
-		log.Printf("spin db: %s\n", Cfg.DriverName)
-	}
-	cfg.XormSpinlog.SetMapper(names.GonicMapper{})
-
-	var session = cfg.XormSpinlog.NewSession()
-	defer session.Close()
-
-	if err = session.Sync(&api.Spinlog{}, &api.Multlog{}); err != nil {
-		return
-	}
-	var i64 int64
-	if i64, err = session.Count(&api.Spinlog{}); err != nil {
-		return
-	}
-	api.SpinCounter.Store(uint64(i64))
-	if i64, err = session.Count(&api.Multlog{}); err != nil {
-		return
-	}
-	api.MultCounter.Store(uint64(i64))
-
-	api.SpinBuf.Init(Cfg.SpinInsertBuffer)
-	api.MultBuf.Init(Cfg.SpinInsertBuffer)
-	return
-}
-
-func SqlLoop(exitctx context.Context) {
-	var fd = Cfg.SqlFlushTick
-	var flush = time.Tick(fd)
-	var passers = time.Tick(time.Hour * 8)
-	for {
-		select {
-		case <-flush:
-			for cid, bat := range api.BankBat {
-				if err := bat.Flush(cfg.XormStorage, fd); err != nil {
-					log.Printf("can not update bank for cid=%d: %s", cid, err.Error())
-				}
-			}
-			if err := api.JoinBuf.Flush(cfg.XormStorage, fd); err != nil {
-				log.Printf("can not write to story log: %s", err.Error())
-			}
-			if Cfg.UseSpinLog {
-				if err := api.SpinBuf.Flush(cfg.XormSpinlog, fd); err != nil {
-					log.Printf("can not write to spin log: %s", err.Error())
-				}
-				if err := api.MultBuf.Flush(cfg.XormSpinlog, fd); err != nil {
-					log.Printf("can not write to mult log: %s", err.Error())
-				}
-			}
-		case <-passers:
-			cfg.XormStorage.Where("ctime<? AND status=0", time.Now().Add(-time.Hour*3*24).Format(time.DateTime)).Delete(&api.User{})
-		case <-exitctx.Done():
-			return
-		}
-	}
-}
-
-func InitSQL() (err error) {
-	if err = InitStorage(); err != nil {
-		err = fmt.Errorf("can not init XORM records storage: %w", err)
-		return
-	}
-	if Cfg.SpinSourceName == "" {
-		Cfg.UseSpinLog = false
-	}
-	if Cfg.UseSpinLog {
-		if err = InitSpinlog(); err != nil {
-			err = fmt.Errorf("can not init XORM spins log storage: %w", err)
-			return
+		if ok {
+			sp.PF |= uf
 		}
 	}
 	return
 }
 
-func DoneSQL() (err error) {
-	var errs []error
-	for _, bat := range api.BankBat {
-		errs = append(errs, bat.Flush(cfg.XormStorage, 0))
-	}
-	errs = append(errs, api.JoinBuf.Flush(cfg.XormStorage, 0))
-	errs = append(errs, cfg.XormStorage.Close())
+// scanCmd represents the `scan` command
+var scanCmd = &cobra.Command{
+	Use:     "scan",
+	Aliases: []string{"bf", "mc", "bruteforce", "montecarlo"},
+	Short:   scanShort,
+	Long:    scanLong,
+	Example: fmt.Sprintf(scanExmp, cfg.AppName),
+	Run: func(cmd *cobra.Command, args []string) {
+		var err error
+		var exitctx = Startup()
+		var pf = cmd.Flags()
 
-	if Cfg.UseSpinLog {
-		errs = append(errs, api.SpinBuf.Flush(cfg.XormSpinlog, 0))
-		errs = append(errs, api.MultBuf.Flush(cfg.XormSpinlog, 0))
-		errs = append(errs, cfg.XormSpinlog.Close())
-	}
-	return errors.Join(errs...)
+		// Load yaml-files
+		var noembed bool
+		if noembed, err = pf.GetBool("noembed"); err != nil {
+			log.Fatalln(err.Error())
+			return
+		}
+		if !noembed {
+			LoadInternalYaml(exitctx)
+		}
+		if err = LoadExternalYaml(exitctx); err != nil {
+			log.Fatalf("can not load external yaml files: %s", err.Error())
+			return
+		}
+		UpdateAlgList()
+
+		var alias string
+		if alias, err = pf.GetString("game"); err != nil {
+			log.Fatalln(err.Error())
+			return
+		}
+		var aid = util.ToID(alias)
+		var gi *game.GameInfo
+		var ok bool
+		if gi, ok = game.InfoMap[aid]; !ok {
+			log.Fatalf("game name \"%s\" does not recognized", alias)
+			return
+		}
+		if len(gi.RTP) == 0 {
+			log.Fatalf("RTP list does not complete for \"%s\"", alias)
+			return
+		}
+
+		var scan game.Scanner
+		if scan, ok = game.ScanFactory[aid]; !ok {
+			log.Fatalf("game name \"%s\" does not recognized", alias)
+			return
+		}
+		if scan == nil {
+			fmt.Println()
+			fmt.Printf("*** scanner for '%s' game does not provided ***\n", gi.ID())
+		}
+
+		var sp game.ScanPar
+
+		switch cmd.CalledAs() {
+		case "scan", "bf", "bruteforce":
+			sp.Method = game.CMbruteforce
+		case "mc", "montecarlo":
+			sp.Method = game.CMmontecarlo
+		}
+
+		if err = SetupParSheet(pf, &sp, gi); err != nil {
+			log.Fatalln(err.Error())
+			return
+		}
+
+		scan(exitctx, &sp)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(scanCmd)
+
+	var pf = scanCmd.Flags()
+	pf.Bool("noembed", false, "do not load embedded yaml files, useful for development")
+	pf.StringP("game", "g", "", "identifier of game to scan")
+	// ParSheet
+	pf.Int("mt", 0, "multithreaded scanning threads number")
+	pf.Float64P("rtp", "r", cfg.DefMRTP, "master RTP of game")
+	pf.IntP("sel", "l", 0, "number of selected bet lines, 0 for all")
+	pf.Float64("conf", 95, "confidence probability, in percents")
+	pf.Uint64P("total", "n", 10, "Monte Carlo method iterations number, in millions")
+	pf.Float64P("prec", "p", 0.1, "precision of result for Monte Carlo method, in percents")
+	// print flags
+	pf.Bool("main", true, "print RTP, sigma and other main information")
+	pf.Bool("jack", true, "print info about progressive jackpots")
+	pf.Bool("fg", true, "print info for bonus reels")
+	pf.Bool("vi", true, "print volatility index")
+	pf.Bool("ci", true, "print index of convergence")
+	pf.Bool("spread", false, "print RTP spread")
+	pf.Bool("casc", false, "print cascade metrics")
+	pf.Bool("sym", false, "print symbols contribution to payouts")
+	pf.Bool("raw", false, "simulator raw data")
+	pf.Bool("full", false, "print full parsheet (switch on all print-flags except raw data)")
+
+	pf.SortFlags = false
+
+	scanCmd.MarkFlagRequired("game")
 }
