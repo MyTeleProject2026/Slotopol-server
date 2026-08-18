@@ -3,7 +3,7 @@
 package firekeno
 
 import (
-	"github.com/slotopol/server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
 )
 
 var Info = game.AlgInfo{
