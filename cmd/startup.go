@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/slotopol/server/api"
-	"github.com/slotopol/server/config"
-	"github.com/slotopol/server/game"
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/api"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"

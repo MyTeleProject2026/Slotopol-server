@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/slotopol/server/api"
-	"github.com/slotopol/server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/api"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/gin-gonic/gin"
