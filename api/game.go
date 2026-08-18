@@ -13,12 +13,10 @@ import (
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
-// Returns full list of all available algorithms.
 func ApiGameAlgs(c *gin.Context) {
 	RetOk(c, game.AlgList)
 }
 
-// List of available games selected by filters.
 func ApiGameList(c *gin.Context) {
 	var err error
 	var arg struct {
@@ -111,7 +109,6 @@ var (
 	JoinBuf = SqlStory{}
 )
 
-// Creates new instance of game.
 func ApiGameNew(c *gin.Context) {
 	var err error
 	var ok bool
@@ -172,10 +169,9 @@ func ApiGameNew(c *gin.Context) {
 		Game: anygame,
 	}
 
-	// insert new story entry
 	if Cfg.ClubInsertBuffer > 1 {
-		go JoinBuf.Join(cfg.XormStorage, &scene.Story)
-	} else if err = JoinBuf.Join(cfg.XormStorage, &scene.Story); err != nil {
+		go JoinBuf.Join(XormStorage, &scene.Story)
+	} else if err = JoinBuf.Join(XormStorage, &scene.Story); err != nil {
 		Ret500(c, AEC_game_new_sql, err)
 		return
 	}
@@ -189,7 +185,6 @@ func ApiGameNew(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Joins to game and creates new instance of game.
 func ApiGameJoin(c *gin.Context) {
 	var err error
 	var ok bool
@@ -236,7 +231,6 @@ func ApiGameJoin(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Returns full info of game scene with given GID, and balance on wallet.
 func ApiGameInfo(c *gin.Context) {
 	var err error
 	var ok bool
@@ -295,7 +289,6 @@ func ApiGameInfo(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// Returns master RTP for given GID.
 func ApiGameRtpGet(c *gin.Context) {
 	var err error
 	var ok bool
