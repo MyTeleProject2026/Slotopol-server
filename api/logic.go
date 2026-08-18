@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/atomic"
 
-	"github.com/slotopol/server/config"
-	"github.com/slotopol/server/game"
-	"github.com/slotopol/server/util"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/game"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 type ClubData struct {
