@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	Cfg = config.Cfg // shortcut
+	Cfg = config.Cfg
 )
 
 var (
@@ -40,7 +40,6 @@ func Startup() (exitctx context.Context) {
 	exitctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		defer cancel()
-
 		var sigint = make(chan os.Signal, 1)
 		var sigterm = make(chan os.Signal, 1)
 		signal.Notify(sigint, syscall.SIGINT)
@@ -185,12 +184,9 @@ func InitStorage() (err error) {
 		return
 	}
 
-	// --- FIX: use absolute path to appdata for initialization files ---
+	// Determine appdata directory
 	appdataDir := "appdata"
-	// If running in Render, the binary is in the root, appdata is a subdirectory.
-	// If local, it might be in the same directory as binary; we'll check both.
 	if _, err := os.Stat(appdataDir); os.IsNotExist(err) {
-		// Try relative to executable path
 		appdataDir = filepath.Join(config.ExePath, "appdata")
 	}
 
@@ -200,12 +196,10 @@ func InitStorage() (err error) {
 		return
 	}
 	if clubEmpty {
-		// Load the SQL file
 		sqlPath := filepath.Join(appdataDir, "slot-clubinit.sql")
 		var body []byte
 		if body, err = os.ReadFile(sqlPath); err != nil {
 			log.Printf("can not open SQL-file with initial settings: %s", err.Error())
-			// Allow continue, but we will also try to insert defaults if missing
 		} else {
 			var list = bytes.Split(body, []byte{';'})
 			for _, cmd := range list {
@@ -219,14 +213,18 @@ func InitStorage() (err error) {
 		}
 	}
 
-	// --- NEW: Ensure default users exist even if club table was not empty ---
-	// This is to fix the "props without user" error when users table is empty.
+	// If users table is empty, clean up props and insert defaults
 	var userCount int64
 	if userCount, err = session.Count(&api.User{}); err != nil {
 		return
 	}
 	if userCount == 0 {
-		log.Println("users table is empty, inserting default users and props")
+		log.Println("users table is empty, clearing props and inserting default users")
+
+		// Delete all existing props to avoid primary key conflicts
+		if _, err = session.Exec("DELETE FROM props"); err != nil {
+			return
+		}
 
 		// Insert default users
 		defaultUsers := []api.User{
@@ -240,7 +238,7 @@ func InitStorage() (err error) {
 			}
 		}
 
-		// Insert default props (assuming club 1 exists)
+		// Insert default props (assuming club 1 and 2 exist)
 		defaultProps := []api.Props{
 			{CID: 1, UID: 1, Wallet: 100000, Access: 31, MRTP: 0},
 			{CID: 2, UID: 1, Wallet: 0, Access: 0, MRTP: 0},
@@ -263,15 +261,15 @@ func InitStorage() (err error) {
 	var body []byte
 	if body, err = os.ReadFile(yamlPath); err != nil {
 		log.Printf("can not open YAML-file with properties initialization for new user: %s", err.Error())
-		// Not fatal – we already inserted default users
-		err = nil // remove error
+		err = nil
 	} else if err = yaml.Unmarshal(body, &api.PropMaster); err != nil {
 		log.Printf("can not unmarshal 'slot-newuser.yaml': %s", err.Error())
-		err = nil // remove error
+		err = nil
 	}
 
 	const limit = 256
 
+	// Load clubs
 	var offset = 0
 	for {
 		var chunk []api.ClubData
@@ -291,6 +289,7 @@ func InitStorage() (err error) {
 	}
 	log.Printf("loaded %d clubs\n", api.Clubs.Len())
 
+	// Load users
 	offset = 0
 	for {
 		var chunk []*api.User
@@ -308,6 +307,7 @@ func InitStorage() (err error) {
 	}
 	log.Printf("loaded %d users\n", api.Users.Len())
 
+	// Load props
 	offset = 0
 	for {
 		var chunk []*api.Props
@@ -321,7 +321,6 @@ func InitStorage() (err error) {
 			}
 			var user, ok = api.Users.Get(props.UID)
 			if !ok {
-				// Skip props for missing users (shouldn't happen now, but safety)
 				log.Printf("warning: skipping props for missing user UID=%d, CID=%d", props.UID, props.CID)
 				continue
 			}
