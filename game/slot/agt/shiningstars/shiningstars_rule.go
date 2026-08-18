@@ -3,7 +3,7 @@ package shiningstars
 // See: https://agtsoftware.com/games/agt/shiningstars
 
 import (
-	"github.com/slotopol/server/game/slot"
+	"github.com/MyTeleProject2026/Slotopol-server/game/slot"
 )
 
 const (
