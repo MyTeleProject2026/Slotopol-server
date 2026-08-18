@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	// config is not needed because we use global Cfg from auth.go
 )
 
 // CloudinaryImage represents the response from Cloudinary upload
@@ -44,10 +43,10 @@ type CloudinaryUploadParams struct {
 
 // UploadToCloudinary uploads a file to Cloudinary
 func UploadToCloudinary(params CloudinaryUploadParams) (*CloudinaryImage, error) {
-	cloudName := Cfg.Cloudinary.CloudName
-	apiKey := Cfg.Cloudinary.APIKey
-	apiSecret := Cfg.Cloudinary.APISecret
-	uploadFolder := Cfg.Cloudinary.UploadFolder
+	cloudName := Cfg.CloudName // flat field
+	apiKey := Cfg.APIKey       // flat field
+	apiSecret := Cfg.APISecret // flat field
+	uploadFolder := Cfg.UploadFolder // flat field
 
 	if cloudName == "" || apiKey == "" || apiSecret == "" {
 		return nil, fmt.Errorf("Cloudinary credentials not configured")
@@ -171,14 +170,14 @@ func ApiUploadImage(c *gin.Context) {
 	}
 	defer src.Close()
 
-	// Check file size
-	if file.Size > Cfg.Uploads.MaxFileSize {
-		Ret400(c, 0, fmt.Errorf("file size exceeds maximum of %d bytes", Cfg.Uploads.MaxFileSize))
+	// Check file size – flat field
+	if file.Size > Cfg.MaxFileSize {
+		Ret400(c, 0, fmt.Errorf("file size exceeds maximum of %d bytes", Cfg.MaxFileSize))
 		return
 	}
 
-	// Check file type
-	allowedTypes := Cfg.Uploads.AllowedTypes
+	// Check file type – flat field
+	allowedTypes := Cfg.AllowedTypes
 	contentType := file.Header.Get("Content-Type")
 	allowed := false
 	for _, t := range allowedTypes {
@@ -272,9 +271,10 @@ func ApiDeleteImage(c *gin.Context) {
 		return
 	}
 
-	cloudName := Cfg.Cloudinary.CloudName
-	apiKey := Cfg.Cloudinary.APIKey
-	apiSecret := Cfg.Cloudinary.APISecret
+	// flat fields
+	cloudName := Cfg.CloudName
+	apiKey := Cfg.APIKey
+	apiSecret := Cfg.APISecret
 
 	// Build Cloudinary delete URL
 	deleteURL := fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/destroy", cloudName)
