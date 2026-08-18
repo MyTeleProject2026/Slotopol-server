@@ -1,298 +1,659 @@
 package api
 
 import (
-	"os"
-	"path/filepath"
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"io"
+	"math/rand/v2"
+	"net/http"
+	"strings"
 	"time"
 
-	"github.com/spf13/viper"
-	"xorm.io/xorm"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
-// ============================================================
-// Command-line flags and exports for cmd package
-// ============================================================
+const (
+	jwtIssuer = "slotopol"
+	userKey   = "user"
+	realmBasic  = `Basic realm="slotopol", charset="UTF-8"`
+	realmBearer = `JWT realm="slotopol", charset="UTF-8"`
+)
 
-// AppName is the application name used in CLI.
-var AppName = "slotopol"
+const (
+	sqlnewprops = `INSERT INTO props (cid,uid) SELECT cid,? FROM club`
+)
 
-// Command-line flags (set by cobra)
 var (
-	CfgFile string   // path to config file
-	SqlPath string   // path to sqlite databases
-	ObjPath []string // additional yaml paths
-	Verbose bool     // verbose logging
+	ErrNoJwtID  = errors.New("jwt-token does not have user id")
+	ErrBadJwtID = errors.New("jwt-token id does not refer to registered user")
+	ErrNoAuth   = errors.New("authorization is required")
+	ErrNoScheme = errors.New("authorization does not have expected scheme")
+	ErrNoSecret = errors.New("expected password or SHA256 hash on it and current time as a nonce")
+	ErrSmallKey = errors.New("password too small")
+	ErrNoCred   = errors.New("user with given credentials does not registered")
+	ErrActivate = errors.New("activation required for this account")
+	ErrOldCode  = errors.New("verification code expired")
+	ErrBadCode  = errors.New("verification code does not pass")
+	ErrNotPass  = errors.New("password is incorrect")
+	ErrSigTime  = errors.New("signing time can not been recognized (time in RFC3339 expected)")
+	ErrSigOut   = errors.New("nonce is expired")
+	ErrBadHash  = errors.New("hash cannot be decoded in hexadecimal")
 )
 
-// ============================================================
-// Config Structures – Compatible with Original Code
-// ============================================================
+var Cfg = config.Cfg
 
-// CfgJwtAuth is the authentication configuration.
-type CfgJwtAuth struct {
-	AccessTTL    time.Duration `json:"access-ttl" yaml:"access-ttl" mapstructure:"access-ttl"`
-	RefreshTTL   time.Duration `json:"refresh-ttl" yaml:"refresh-ttl" mapstructure:"refresh-ttl"`
-	AccessKey    string        `json:"access-key" yaml:"access-key" mapstructure:"access-key"`
-	RefreshKey   string        `json:"refresh-key" yaml:"refresh-key" mapstructure:"refresh-key"`
-	NonceTimeout time.Duration `json:"nonce-timeout" yaml:"nonce-timeout" mapstructure:"nonce-timeout"`
+type Claims struct {
+	jwt.RegisteredClaims
+	UID uint64 `json:"uid,omitempty"`
 }
 
-// CfgSendCode is the activation/email configuration.
-type CfgSendCode struct {
-	UseActivation      bool          `json:"use-activation" yaml:"use-activation" mapstructure:"use-activation"`
-	BrevoApiKey        string        `json:"brevo-api-key" yaml:"brevo-api-key" mapstructure:"brevo-api-key"`
-	BrevoEmailEndpoint string        `json:"brevo-email-endpoint" yaml:"brevo-email-endpoint" mapstructure:"brevo-email-endpoint"`
-	SenderName         string        `json:"sender-name" yaml:"sender-name" mapstructure:"sender-name"`
-	SenderEmail        string        `json:"sender-email" yaml:"sender-email" mapstructure:"sender-email"`
-	ReplytoEmail       string        `json:"replyto-email" yaml:"replyto-email" mapstructure:"replyto-email"`
-	EmailSubject       string        `json:"email-subject" yaml:"email-subject" mapstructure:"email-subject"`
-	EmailHtmlContent   string        `json:"email-html-content" yaml:"email-html-content" mapstructure:"email-html-content"`
-	CodeTimeout        time.Duration `json:"code-timeout" yaml:"code-timeout" mapstructure:"code-timeout"`
-}
-
-// CfgWebServ is the web server configuration.
-type CfgWebServ struct {
-	TrustedProxies    []string      `json:"trusted-proxies" yaml:"trusted-proxies" mapstructure:"trusted-proxies"`
-	PortHTTP          []string      `json:"port-http" yaml:"port-http" mapstructure:"port-http"`
-	ReadTimeout       time.Duration `json:"read-timeout" yaml:"read-timeout" mapstructure:"read-timeout"`
-	ReadHeaderTimeout time.Duration `json:"read-header-timeout" yaml:"read-header-timeout" mapstructure:"read-header-timeout"`
-	WriteTimeout      time.Duration `json:"write-timeout" yaml:"write-timeout" mapstructure:"write-timeout"`
-	IdleTimeout       time.Duration `json:"idle-timeout" yaml:"idle-timeout" mapstructure:"idle-timeout"`
-	MaxHeaderBytes    int           `json:"max-header-bytes" yaml:"max-header-bytes" mapstructure:"max-header-bytes"`
-	ShutdownTimeout   time.Duration `json:"shutdown-timeout" yaml:"shutdown-timeout" mapstructure:"shutdown-timeout"`
-}
-
-// CfgXormDrv is the database configuration.
-type CfgXormDrv struct {
-	DriverName       string        `json:"driver-name" yaml:"driver-name" mapstructure:"driver-name"`
-	UseSpinLog       bool          `json:"use-spin-log" yaml:"use-spin-log" mapstructure:"use-spin-log"`
-	ClubSourceName   string        `json:"club-source-name" yaml:"club-source-name" mapstructure:"club-source-name"`
-	SpinSourceName   string        `json:"spin-source-name" yaml:"spin-source-name" mapstructure:"spin-source-name"`
-	SqlFlushTick     time.Duration `json:"sql-flush-tick" yaml:"sql-flush-tick" mapstructure:"sql-flush-tick"`
-	ClubUpdateBuffer int           `json:"club-update-buffer" yaml:"club-update-buffer" mapstructure:"club-update-buffer"`
-	ClubInsertBuffer int           `json:"club-insert-buffer" yaml:"club-insert-buffer" mapstructure:"club-insert-buffer"`
-	SpinInsertBuffer int           `json:"spin-insert-buffer" yaml:"spin-insert-buffer" mapstructure:"spin-insert-buffer"`
-}
-
-// CfgGameplay is the gameplay configuration.
-type CfgGameplay struct {
-	AdjunctLimit    float64 `json:"adjunct-limit" yaml:"adjunct-limit" mapstructure:"adjunct-limit"`
-	MinJackpot      float64 `json:"min-jackpot" yaml:"min-jackpot" mapstructure:"min-jackpot"`
-	MaxSpinAttempts int     `json:"max-spin-attempts" yaml:"max-spin-attempts" mapstructure:"max-spin-attempts"`
-}
-
-// CfgCloudinary is the Cloudinary configuration.
-type CfgCloudinary struct {
-	CloudName    string `json:"cloud_name" yaml:"cloud_name" mapstructure:"cloud_name"`
-	APIKey       string `json:"api_key" yaml:"api_key" mapstructure:"api_key"`
-	APISecret    string `json:"api_secret" yaml:"api_secret" mapstructure:"api_secret"`
-	UploadFolder string `json:"upload_folder" yaml:"upload_folder" mapstructure:"upload_folder"`
-}
-
-// CfgUploads is the uploads configuration.
-type CfgUploads struct {
-	AllowedTypes []string `json:"allowed_types" yaml:"allowed_types" mapstructure:"allowed_types"`
-	MaxFileSize  int64    `json:"max_file_size" yaml:"max_file_size" mapstructure:"max_file_size"`
-	Storage      string   `json:"storage" yaml:"storage" mapstructure:"storage"`
-}
-
-// Config – FLAT STRUCTURE with embedded types
-// This is compatible with the original code that expects
-// fields like Cfg.AccessKey, Cfg.SenderName, etc.
-type Config struct {
-	// Authentication fields (from CfgJwtAuth)
-	AccessTTL    time.Duration `json:"access-ttl" yaml:"access-ttl" mapstructure:"access-ttl"`
-	RefreshTTL   time.Duration `json:"refresh-ttl" yaml:"refresh-ttl" mapstructure:"refresh-ttl"`
-	AccessKey    string        `json:"access-key" yaml:"access-key" mapstructure:"access-key"`
-	RefreshKey   string        `json:"refresh-key" yaml:"refresh-key" mapstructure:"refresh-key"`
-	NonceTimeout time.Duration `json:"nonce-timeout" yaml:"nonce-timeout" mapstructure:"nonce-timeout"`
-
-	// Activation fields (from CfgSendCode)
-	UseActivation      bool          `json:"use-activation" yaml:"use-activation" mapstructure:"use-activation"`
-	BrevoApiKey        string        `json:"brevo-api-key" yaml:"brevo-api-key" mapstructure:"brevo-api-key"`
-	BrevoEmailEndpoint string        `json:"brevo-email-endpoint" yaml:"brevo-email-endpoint" mapstructure:"brevo-email-endpoint"`
-	SenderName         string        `json:"sender-name" yaml:"sender-name" mapstructure:"sender-name"`
-	SenderEmail        string        `json:"sender-email" yaml:"sender-email" mapstructure:"sender-email"`
-	ReplytoEmail       string        `json:"replyto-email" yaml:"replyto-email" mapstructure:"replyto-email"`
-	EmailSubject       string        `json:"email-subject" yaml:"email-subject" mapstructure:"email-subject"`
-	EmailHtmlContent   string        `json:"email-html-content" yaml:"email-html-content" mapstructure:"email-html-content"`
-	CodeTimeout        time.Duration `json:"code-timeout" yaml:"code-timeout" mapstructure:"code-timeout"`
-
-	// Web Server fields (from CfgWebServ)
-	TrustedProxies    []string      `json:"trusted-proxies" yaml:"trusted-proxies" mapstructure:"trusted-proxies"`
-	PortHTTP          []string      `json:"port-http" yaml:"port-http" mapstructure:"port-http"`
-	ReadTimeout       time.Duration `json:"read-timeout" yaml:"read-timeout" mapstructure:"read-timeout"`
-	ReadHeaderTimeout time.Duration `json:"read-header-timeout" yaml:"read-header-timeout" mapstructure:"read-header-timeout"`
-	WriteTimeout      time.Duration `json:"write-timeout" yaml:"write-timeout" mapstructure:"write-timeout"`
-	IdleTimeout       time.Duration `json:"idle-timeout" yaml:"idle-timeout" mapstructure:"idle-timeout"`
-	MaxHeaderBytes    int           `json:"max-header-bytes" yaml:"max-header-bytes" mapstructure:"max-header-bytes"`
-	ShutdownTimeout   time.Duration `json:"shutdown-timeout" yaml:"shutdown-timeout" mapstructure:"shutdown-timeout"`
-
-	// Database fields (from CfgXormDrv)
-	DriverName       string        `json:"driver-name" yaml:"driver-name" mapstructure:"driver-name"`
-	UseSpinLog       bool          `json:"use-spin-log" yaml:"use-spin-log" mapstructure:"use-spin-log"`
-	ClubSourceName   string        `json:"club-source-name" yaml:"club-source-name" mapstructure:"club-source-name"`
-	SpinSourceName   string        `json:"spin-source-name" yaml:"spin-source-name" mapstructure:"spin-source-name"`
-	SqlFlushTick     time.Duration `json:"sql-flush-tick" yaml:"sql-flush-tick" mapstructure:"sql-flush-tick"`
-	ClubUpdateBuffer int           `json:"club-update-buffer" yaml:"club-update-buffer" mapstructure:"club-update-buffer"`
-	ClubInsertBuffer int           `json:"club-insert-buffer" yaml:"club-insert-buffer" mapstructure:"club-insert-buffer"`
-	SpinInsertBuffer int           `json:"spin-insert-buffer" yaml:"spin-insert-buffer" mapstructure:"spin-insert-buffer"`
-
-	// Gameplay fields (from CfgGameplay)
-	AdjunctLimit    float64 `json:"adjunct-limit" yaml:"adjunct-limit" mapstructure:"adjunct-limit"`
-	MinJackpot      float64 `json:"min-jackpot" yaml:"min-jackpot" mapstructure:"min-jackpot"`
-	MaxSpinAttempts int     `json:"max-spin-attempts" yaml:"max-spin-attempts" mapstructure:"max-spin-attempts"`
-
-	// Cloudinary fields
-	CloudName    string `json:"cloud_name" yaml:"cloud_name" mapstructure:"cloud_name"`
-	APIKey       string `json:"api_key" yaml:"api_key" mapstructure:"api_key"`
-	APISecret    string `json:"api_secret" yaml:"api_secret" mapstructure:"api_secret"`
-	UploadFolder string `json:"upload_folder" yaml:"upload_folder" mapstructure:"upload_folder"`
-
-	// Uploads fields
-	AllowedTypes []string `json:"allowed_types" yaml:"allowed_types" mapstructure:"allowed_types"`
-	MaxFileSize  int64    `json:"max_file_size" yaml:"max_file_size" mapstructure:"max_file_size"`
-	Storage      string   `json:"storage" yaml:"storage" mapstructure:"storage"`
-}
-
-// Cfg is the global config instance with defaults.
-var Cfg = &Config{
-	// Authentication defaults
-	AccessTTL:    24 * time.Hour,
-	RefreshTTL:   72 * time.Hour,
-	AccessKey:    "skJgM4NsbP3fs4k7vh0gfdkgGl8dJTszdLxZ1sQ9ksFnxbgvw2RsGH8xxddUV479",
-	RefreshKey:   "zxK4dUnuq3Lhd1Gzhpr3usI5lAzgvy2t3fmxld2spzz7a5nfv0hsksm9cheyutie",
-	NonceTimeout: 150 * time.Second,
-
-	// Activation defaults
-	UseActivation:      false,
-	BrevoApiKey:        "",
-	BrevoEmailEndpoint: "https://api.brevo.com/v3/smtp/email",
-	SenderName:         "Slotopol server",
-	SenderEmail:        "noreply@slotopol.com",
-	ReplytoEmail:       "noreply@slotopol.com",
-	EmailSubject:       "Slotopol verification code",
-	EmailHtmlContent:   "<html><head></head><body><p>Your Slotopol verification code is: <b>%06d</b></p></body></html>",
-	CodeTimeout:        15 * time.Minute,
-
-	// Web Server defaults
-	TrustedProxies:    []string{"127.0.0.0/8"},
-	PortHTTP:          []string{":8080"},
-	ReadTimeout:       15 * time.Second,
-	ReadHeaderTimeout: 15 * time.Second,
-	WriteTimeout:      15 * time.Second,
-	IdleTimeout:       60 * time.Second,
-	MaxHeaderBytes:    1 << 20,
-	ShutdownTimeout:   15 * time.Second,
-
-	// Database defaults
-	DriverName:       "sqlite3",
-	UseSpinLog:       true,
-	ClubSourceName:   "slot-club.sqlite",
-	SpinSourceName:   "slot-spin.sqlite",
-	SqlFlushTick:     2500 * time.Millisecond,
-	ClubUpdateBuffer: 200,
-	ClubInsertBuffer: 150,
-	SpinInsertBuffer: 250,
-
-	// Gameplay defaults
-	AdjunctLimit:    100000,
-	MinJackpot:      10000,
-	MaxSpinAttempts: 300,
-
-	// Cloudinary defaults
-	CloudName:    "",
-	APIKey:       "",
-	APISecret:    "",
-	UploadFolder: "slotopol",
-
-	// Uploads defaults
-	AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"},
-	MaxFileSize:  5 * 1024 * 1024,
-	Storage:      "cloudinary",
-}
-
-// Program paths.
-var (
-	BuildVers string
-	BuildTime string
-	ExePath   string
-	CfgPath   string
-)
-
-// Default master RTP if no others found.
-const DefMRTP = 95.0
-
-// InitConfig initializes the configuration.
-func InitConfig() {
-	v := viper.New()
-	v.SetConfigType("yaml")
-	v.SetEnvPrefix("SLOTOPOL")
-	v.AutomaticEnv()
-	v.SetEnvKeyReplacer(nil)
-
-	// Try to read config file if specified
-	if CfgFile != "" {
-		v.SetConfigFile(CfgFile)
-		if err := v.ReadInConfig(); err == nil {
-			if err := v.Unmarshal(Cfg); err == nil {
-				return
-			}
-		}
+func (c *Claims) Validate() error {
+	if c.UID == 0 {
+		return ErrNoJwtID
 	}
-
-	// Try default path
-	defaultPath := filepath.Join(".", "appdata", "slot-app.yaml")
-	if _, err := os.Stat(defaultPath); err == nil {
-		v.SetConfigFile(defaultPath)
-		if err := v.ReadInConfig(); err == nil {
-			if err := v.Unmarshal(Cfg); err == nil {
-				return
-			}
-		}
-	}
-
-	// No config file found - use environment variables only
-	if err := v.Unmarshal(Cfg); err != nil {
-		// Fallback: use defaults
-	}
-}
-
-// DirExists checks if a directory exists.
-func DirExists(path string) (bool, error) {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return info.IsDir(), nil
-}
-
-// LoadConfig is kept for compatibility.
-func LoadConfig(path string) error {
 	return nil
 }
 
-// GetClubDB returns a xorm engine for club database.
-func (cfg *Config) GetClubDB() (*xorm.Engine, error) {
-	return xorm.NewEngine(cfg.DriverName, cfg.ClubSourceName)
+type AuthGetter func(c *gin.Context) (*User, int, error)
+
+var AuthGetters = []AuthGetter{
+	UserFromHeader, UserFromQuery, UserFromCookie,
 }
 
-// GetSpinDB returns a xorm engine for spin database.
-func (cfg *Config) GetSpinDB() (*xorm.Engine, error) {
-	return xorm.NewEngine(cfg.DriverName, cfg.SpinSourceName)
+func Auth(required bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var err error
+		var code int
+		var user *User
+		for _, getter := range AuthGetters {
+			if user, code, err = getter(c); err != nil {
+				Ret401(c, code, err)
+				return
+			}
+			if user != nil {
+				break
+			}
+		}
+
+		if user != nil {
+			c.Set(userKey, user)
+		} else if required {
+			Ret401(c, AEC_auth_absent, ErrNoAuth)
+			return
+		}
+
+		c.Next()
+	}
 }
 
-func init() {
+func UserFromHeader(c *gin.Context) (*User, int, error) {
+	if hdr := c.Request.Header.Get("Authorization"); hdr != "" {
+		if strings.HasPrefix(hdr, "Basic ") {
+			return GetBasicAuth(hdr[6:])
+		} else if strings.HasPrefix(hdr, "Bearer ") {
+			return GetBearerAuth(hdr[7:])
+		} else {
+			return nil, AEC_auth_scheme, ErrNoScheme
+		}
+	}
+	return nil, 0, nil
+}
+
+func UserFromQuery(c *gin.Context) (*User, int, error) {
+	if credentials := c.Query("cred"); credentials != "" {
+		return GetBasicAuth(credentials)
+	} else if tokenstr := c.Query("token"); tokenstr != "" {
+		return GetBearerAuth(tokenstr)
+	} else if tokenstr := c.Query("jwt"); tokenstr != "" {
+		return GetBearerAuth(tokenstr)
+	}
+	return nil, 0, nil
+}
+
+func UserFromCookie(c *gin.Context) (*User, int, error) {
+	if credentials, _ := c.Cookie("cred"); credentials != "" {
+		return GetBasicAuth(credentials)
+	} else if tokenstr, _ := c.Cookie("token"); tokenstr != "" {
+		return GetBearerAuth(tokenstr)
+	} else if tokenstr, _ := c.Cookie("jwt"); tokenstr != "" {
+		return GetBearerAuth(tokenstr)
+	}
+	return nil, 0, nil
+}
+
+func UserFromForm(c *gin.Context) (*User, int, error) {
+	if credentials := c.PostForm("cred"); credentials != "" {
+		return GetBasicAuth(credentials)
+	} else if tokenstr := c.PostForm("token"); tokenstr != "" {
+		return GetBearerAuth(tokenstr)
+	} else if tokenstr := c.PostForm("jwt"); tokenstr != "" {
+		return GetBearerAuth(tokenstr)
+	}
+	return nil, 0, nil
+}
+
+func GetBasicAuth(credentials string) (user *User, code int, err error) {
+	var decoded []byte
+	if decoded, err = base64.RawURLEncoding.DecodeString(credentials); err != nil {
+		return nil, AEC_basic_decode, err
+	}
+	var parts = strings.Split(util.B2S(decoded), ":")
+
+	var email = util.ToLower(parts[0])
+	for _, u := range Users.Items() {
+		if u.Email == email {
+			user = u
+			break
+		}
+	}
+	if user == nil {
+		err, code = ErrNoCred, AEC_basic_nouser
+		return
+	}
+	if user.Secret != parts[1] {
+		err, code = ErrNotPass, AEC_basic_deny
+		return
+	}
+	return
+}
+
+func GetBearerAuth(tokenstr string) (user *User, code int, err error) {
+	var claims Claims
+	_, err = jwt.ParseWithClaims(tokenstr, &claims, func(*jwt.Token) (any, error) {
+		var keys = jwt.VerificationKeySet{
+			Keys: []jwt.VerificationKey{
+				util.S2B(Cfg.Authentication.AccessKey),
+				util.S2B(Cfg.Authentication.RefreshKey),
+			},
+		}
+		return keys, nil
+	}, jwt.WithExpirationRequired(), jwt.WithIssuer(jwtIssuer), jwt.WithLeeway(5*time.Second))
+
+	if err == nil {
+		var ok bool
+		if user, ok = Users.Get(claims.UID); !ok {
+			err, code = ErrBadJwtID, AEC_token_nouser
+		}
+		return
+	}
+	switch {
+	case errors.Is(err, jwt.ErrTokenMalformed):
+		code = AEC_token_malform
+	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+		code = AEC_token_notsign
+	case errors.Is(err, jwt.ErrTokenInvalidClaims):
+		code = AEC_token_badclaims
+	case errors.Is(err, jwt.ErrTokenExpired):
+		code = AEC_token_expired
+	case errors.Is(err, jwt.ErrTokenNotValidYet):
+		code = AEC_token_notyet
+	case errors.Is(err, jwt.ErrTokenInvalidIssuer):
+		code = AEC_token_issuer
+	default:
+		code = AEC_token_error
+	}
+	return
+}
+
+func Handle404(c *gin.Context) {
+	Ret404(c, AEC_nourl, Err404)
+}
+
+func Handle405(c *gin.Context) {
+	RetErr(c, http.StatusMethodNotAllowed, AEC_nomethod, Err405)
+}
+
+type AuthResp struct {
+	XMLName xml.Name `json:"-" yaml:"-" xml:"ret"`
+	UID     uint64   `json:"uid" yaml:"uid" xml:"uid"`
+	Email   string   `json:"email" yaml:"email" xml:"email"`
+	Access  string   `json:"access" yaml:"access" xml:"access"`
+	Refrsh  string   `json:"refrsh" yaml:"refrsh" xml:"refrsh"`
+	Expire  string   `json:"expire" yaml:"expire" xml:"expire"`
+	Living  string   `json:"living" yaml:"living" xml:"living"`
+}
+
+func (r *AuthResp) Setup(user *User) {
 	var err error
-	if ExePath, err = os.Executable(); err != nil {
+	var token *jwt.Token
+	var now = jwt.NewNumericDate(time.Now())
+	var exp = jwt.NewNumericDate(time.Now().Add(Cfg.Authentication.AccessTTL))
+	var age = jwt.NewNumericDate(time.Now().Add(Cfg.Authentication.RefreshTTL))
+	token = jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			NotBefore: now,
+			ExpiresAt: exp,
+			Issuer:    jwtIssuer,
+		},
+		UID: user.UID,
+	})
+	if r.Access, err = token.SignedString([]byte(Cfg.Authentication.AccessKey)); err != nil {
 		panic(err)
 	}
-	ExePath = filepath.Dir(ExePath)
+	r.Expire = exp.Format(time.RFC3339)
+	token = jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			NotBefore: now,
+			ExpiresAt: age,
+			Issuer:    jwtIssuer,
+		},
+		UID: user.UID,
+	})
+	if r.Refrsh, err = token.SignedString([]byte(Cfg.Authentication.AccessKey)); err != nil {
+		panic(err)
+	}
+	r.Living = age.Format(time.RFC3339)
+	r.UID = user.UID
+	r.Email = user.Email
+}
 
-	if CfgPath, err = filepath.Abs("."); err != nil {
-		panic(err)
+func sendcode(name, email string, code uint32) (err error) {
+	type person struct {
+		Name  string `json:"name,omitempty"`
+		Email string `json:"email"`
 	}
+	type content struct {
+		Sender  person   `json:"sender"`
+		ReplyTo person   `json:"replyTo"`
+		To      []person `json:"to"`
+		Subject string   `json:"subject,omitempty"`
+		Html    string   `json:"htmlContent,omitempty"`
+		Text    string   `json:"textContent,omitempty"`
+		Tags    []string `json:"tags,omitempty"`
+	}
+
+	const ct = "application/json"
+	var m = content{
+		Sender: person{
+			Name:  Cfg.Activation.SenderName,
+			Email: Cfg.Activation.SenderEmail,
+		},
+		ReplyTo: person{
+			Email: Cfg.Activation.ReplytoEmail,
+		},
+		To: []person{
+			{
+				Name:  name,
+				Email: email,
+			},
+		},
+		Subject: Cfg.Activation.EmailSubject,
+		Html:    fmt.Sprintf(Cfg.Activation.EmailHtmlContent, code),
+	}
+
+	var body []byte
+	if body, err = json.Marshal(m); err != nil {
+		return err
+	}
+
+	var req *http.Request
+	if req, err = http.NewRequest("POST", Cfg.Activation.BrevoEmailEndpoint, bytes.NewReader(body)); err != nil {
+		return err
+	}
+	req.Header.Set("api-key", Cfg.Activation.BrevoApiKey)
+	req.Header.Set("Content-Type", ct)
+	req.Header.Set("Accept", ct)
+
+	var resp *http.Response
+	if resp, err = http.DefaultClient.Do(req); err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if body, err = io.ReadAll(resp.Body); err != nil {
+		return err
+	}
+	var rm map[string]string
+	if err = json.Unmarshal(body, &rm); err != nil {
+		return err
+	}
+	if msg, ok := rm["message"]; ok {
+		return errors.New(msg)
+	}
+	return
+}
+
+func ApiSignis(c *gin.Context) {
+	var err error
+	var arg struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
+		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
+	}
+	var ret struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"ret"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid"`
+		Email   string   `json:"email" yaml:"email" xml:"email"`
+		Name    string   `json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"`
+	}
+
+	if err = c.ShouldBind(&arg); err != nil {
+		Ret400(c, AEC_signis_nobind, err)
+		return
+	}
+
+	if arg.UID != 0 {
+		if user, ok := Users.Get(arg.UID); ok {
+			ret.UID = user.UID
+			ret.Email = user.Email
+			ret.Name = user.Name
+		} else {
+			Ret404(c, AEC_signis_nouid, ErrNoCred)
+			return
+		}
+	} else {
+		var email = util.ToLower(arg.Email)
+		for _, user := range Users.Items() {
+			if user.Email == email {
+				ret.UID = user.UID
+				ret.Email = user.Email
+				ret.Name = user.Name
+				break
+			}
+		}
+		if ret.UID == 0 {
+			Ret404(c, AEC_signis_noemail, ErrNoCred)
+			return
+		}
+	}
+
+	RetOk(c, ret)
+}
+
+func ApiSendCode(c *gin.Context) {
+	var err error
+	var arg struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
+		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
+	}
+
+	if err = c.ShouldBind(&arg); err != nil {
+		Ret400(c, AEC_sendcode_nobind, err)
+		return
+	}
+
+	var email = util.ToLower(arg.Email)
+
+	var user *User
+	if arg.UID != 0 {
+		user, _ = Users.Get(arg.UID)
+	} else {
+		for _, u := range Users.Items() {
+			if u.Email == email {
+				user = u
+				break
+			}
+		}
+	}
+	if user == nil {
+		Ret403(c, AEC_sendcode_nouser, ErrNoCred)
+		return
+	}
+
+	var code = rand.N[uint32](1000000)
+
+	if _, err = XormStorage.ID(user.UID).Cols("code").Update(&User{Code: code}); err != nil {
+		Ret500(c, AEC_sendcode_update, err)
+		return
+	}
+
+	if err = sendcode(user.Name, user.Email, code); err != nil {
+		Ret500(c, AEC_sendcode_code, err)
+		return
+	}
+
+	user.Code = code
+
+	Ret204(c)
+}
+
+func ApiActivate(c *gin.Context) {
+	var err error
+	var arg struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
+		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
+		Code    uint32   `json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty" form:"code"`
+	}
+
+	if err = c.ShouldBind(&arg); err != nil {
+		Ret400(c, AEC_activate_nobind, err)
+		return
+	}
+
+	var email = util.ToLower(arg.Email)
+
+	var user *User
+	if arg.UID != 0 {
+		user, _ = Users.Get(arg.UID)
+	} else {
+		for _, u := range Users.Items() {
+			if u.Email == email {
+				user = u
+				break
+			}
+		}
+	}
+	if user == nil {
+		Ret403(c, AEC_activate_nouser, ErrNoCred)
+		return
+	}
+
+	if _, al := GetAdmin(c, 0); al&ALadmin == 0 {
+		if time.Since(user.UTime) > Cfg.Activation.CodeTimeout {
+			Ret403(c, AEC_activate_oldcode, ErrOldCode)
+			return
+		}
+		if arg.Code != user.Code {
+			Ret403(c, AEC_activate_badcode, ErrBadCode)
+			return
+		}
+	}
+
+	if _, err = XormStorage.ID(user.UID).Cols("status").Update(&User{Status: user.Status | UFactivated}); err != nil {
+		Ret500(c, AEC_activate_update, err)
+		return
+	}
+
+	user.Status |= UFactivated
+
+	Ret204(c)
+}
+
+func ApiSignup(c *gin.Context) {
+	var err error
+	var arg struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
+		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"required,email"`
+		Secret  string   `json:"secret" yaml:"secret" xml:"secret" form:"secret" binding:"required"`
+		Name    string   `json:"name,omitempty" yaml:"name,omitempty" xml:"name,omitempty"`
+	}
+	var ret struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"ret"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid"`
+		Email   string   `json:"email" yaml:"email" xml:"email"`
+	}
+
+	if err = c.ShouldBind(&arg); err != nil {
+		Ret400(c, AEC_signup_nobind, err)
+		return
+	}
+	if len(arg.Secret) < 6 {
+		Ret400(c, AEC_signup_smallsec, ErrSmallKey)
+		return
+	}
+
+	var email = util.ToLower(arg.Email)
+
+	var code uint32
+	var status UF
+	if _, al := GetAdmin(c, 0); al&ALadmin != 0 || !Cfg.Activation.UseActivation {
+		status = UFactivated
+	} else {
+		code = rand.N[uint32](1000000)
+		if err = sendcode(arg.Name, email, code); err != nil {
+			Ret500(c, AEC_signup_code, err)
+			return
+		}
+	}
+
+	var user = &User{
+		Email:  email,
+		Secret: arg.Secret,
+		Name:   arg.Name,
+		Code:   code,
+		Status: status,
+	}
+	if err = SafeTransaction(XormStorage, func(session *Session) (err error) {
+		if _, err = session.Insert(user); err != nil {
+			return
+		}
+
+		if _, err = session.Exec(sqlnewprops, user.UID); err != nil {
+			return
+		}
+
+		var props = make([]Props, len(PropMaster))
+		copy(props, PropMaster)
+		for i := range props {
+			props[i].UID = user.UID
+			if _, err = session.Where("cid=? AND uid=?", props[i].CID, user.UID).Update(&props[i]); err != nil {
+				return
+			}
+		}
+
+		user.Init()
+		for cid := range Clubs.Items() {
+			user.InsertProps(&Props{
+				CID: cid,
+				UID: user.UID,
+			})
+		}
+		for i := range props {
+			user.InsertProps(&props[i])
+		}
+		Users.Set(user.UID, user)
+		return
+	}); err != nil {
+		Ret500(c, AEC_signup_sql, err)
+		return
+	}
+
+	ret.UID = user.UID
+	ret.Email = email
+	RetOk(c, ret)
+}
+
+func ApiSignin(c *gin.Context) {
+	var err error
+	var arg struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
+		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required_without=Email"`
+		Email   string   `json:"email" yaml:"email" xml:"email" form:"email" binding:"omitempty,email"`
+		Secret  string   `json:"secret" yaml:"secret,omitempty" xml:"secret,omitempty" form:"secret"`
+		HS256   string   `json:"hs256,omitempty" yaml:"hs256,omitempty" xml:"hs256,omitempty" form:"hs256"`
+		SigTime string   `json:"sigtime,omitempty" yaml:"sigtime,omitempty" xml:"sigtime,omitempty" form:"sigtime"`
+		Code    uint32   `json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty" form:"code"`
+	}
+	var ret AuthResp
+
+	if err = c.ShouldBind(&arg); err != nil {
+		Ret400(c, AEC_signin_nobind, err)
+		return
+	}
+	if len(arg.SigTime) == 0 && len(arg.Secret) == 0 {
+		Ret400(c, AEC_signin_nosecret, ErrNoSecret)
+		return
+	}
+	if len(arg.Secret) > 0 && len(arg.Secret) < 6 {
+		Ret400(c, AEC_signin_smallsec, ErrSmallKey)
+		return
+	}
+
+	var email = util.ToLower(arg.Email)
+
+	var user *User
+	if arg.UID != 0 {
+		user, _ = Users.Get(arg.UID)
+	} else {
+		for _, u := range Users.Items() {
+			if u.Email == email {
+				user = u
+				break
+			}
+		}
+	}
+	if user == nil {
+		Ret403(c, AEC_signin_nouser, ErrNoCred)
+		return
+	}
+
+	if user.Status&UFactivated == 0 {
+		Ret403(c, AEC_signin_activate, ErrActivate)
+		return
+	}
+
+	if user.Status&UFsigncode != 0 {
+		if time.Since(user.UTime) > Cfg.Activation.CodeTimeout {
+			Ret403(c, AEC_signin_oldcode, ErrOldCode)
+			return
+		}
+		if arg.Code != user.Code {
+			Ret403(c, AEC_signin_badcode, ErrBadCode)
+			return
+		}
+	}
+
+	if len(arg.Secret) > 0 {
+		if arg.Secret != user.Secret {
+			Ret403(c, AEC_signin_denypass, ErrNotPass)
+			return
+		}
+	} else {
+		var sigtime time.Time
+		if sigtime, err = time.Parse(time.RFC3339, arg.SigTime); err != nil {
+			Ret400(c, AEC_signin_sigtime, ErrSigTime)
+			return
+		}
+		if time.Since(sigtime) > Cfg.Authentication.NonceTimeout {
+			Ret403(c, AEC_signin_timeout, ErrSigOut)
+			return
+		}
+
+		var hs256 []byte
+		if hs256, err = hex.DecodeString(arg.HS256); err != nil {
+			Ret400(c, AEC_signin_hs256, ErrBadHash)
+			return
+		}
+
+		var h = hmac.New(sha256.New, util.S2B(arg.SigTime))
+		h.Write(util.S2B(user.Secret))
+		var master = h.Sum(nil)
+		if !hmac.Equal(master, hs256) {
+			Ret403(c, AEC_signin_denyhash, ErrNotPass)
+			return
+		}
+	}
+
+	ret.Setup(user)
+	RetOk(c, ret)
+}
+
+func ApiRefresh(c *gin.Context) {
+	var ret AuthResp
+
+	var user = c.MustGet(userKey).(*User)
+	ret.Setup(user)
+	RetOk(c, ret)
 }
