@@ -16,12 +16,9 @@ import (
 
 type Session = xorm.Session
 
-// Global database engines (these are initialized in cmd/startup.go)
+// Global database engines (initialized in cmd/startup.go)
 var XormStorage  *xorm.Engine
 var XormSpinlog  *xorm.Engine
-
-// Global config reference – already defined in auth.go, so do NOT redeclare here.
-// var Cfg = config.Cfg   // ← REMOVED to avoid duplicate
 
 // "Server" field for HTTP headers.
 var serverhdr = fmt.Sprintf("slotopol/%s (%s; %s)", config.BuildVers, runtime.GOOS, runtime.GOARCH)
@@ -131,14 +128,13 @@ func Ret500(c *gin.Context, code int, err error) {
 func SetupRouter(r *gin.Engine) {
 	r.NoRoute(Handle404)
 	r.NoMethod(Handle405)
-	//r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	r.Any("/ping", ApiPing)
 	r.GET("/servinfo", ApiServInfo)
 	r.GET("/memusage", ApiMemUsage)
 	r.GET("/diskusage", ApiDiskUsage)
 
-	// authorization
+	// Authorization
 	r.Any("/signis", ApiSignis)
 	r.GET("/sendcode", ApiSendCode)
 	r.GET("/activate", Auth(false), ApiActivate)
@@ -148,7 +144,7 @@ func SetupRouter(r *gin.Engine) {
 
 	var ra = r.Group("/", Auth(true))
 
-	// common game group
+	// Common game group
 	r.GET("/game/algs", ApiGameAlgs)
 	r.GET("/game/list", ApiGameList)
 	var rg = ra.Group("/game")
@@ -157,7 +153,7 @@ func SetupRouter(r *gin.Engine) {
 	rg.POST("/info", ApiGameInfo)
 	rg.POST("/rtp/get", ApiGameRtpGet)
 
-	// slot group
+	// Slot group
 	var rs = ra.Group("/slot")
 	rs.POST("/bet/get", ApiSlotBetGet)
 	rs.POST("/bet/set", ApiSlotBetSet)
@@ -168,17 +164,11 @@ func SetupRouter(r *gin.Engine) {
 	rs.POST("/doubleup", ApiSlotDoubleup)
 	rs.POST("/collect", ApiSlotCollect)
 
-	// keno group – temporarily disabled (missing implementations)
+	// Keno group – DISABLED (missing implementations)
 	// var rk = ra.Group("/keno")
-	// rk.POST("/bet/get", ApiKenoBetGet)
-	// rk.POST("/bet/set", ApiKenoBetSet)
-	// rk.POST("/sel/get", ApiKenoSelGet)
-	// rk.POST("/sel/set", ApiKenoSelSet)
-	// rk.POST("/sel/getslice", ApiKenoSelGetSlice)
-	// rk.POST("/sel/setslice", ApiKenoSelSetSlice)
-	// rk.POST("/spin", ApiKenoSpin)
+	// ...
 
-	// properties group
+	// Properties group
 	var rp = ra.Group("/prop")
 	rp.POST("/get", ApiPropsGet)
 	rp.POST("/wallet/get", ApiPropsWalletGet)
@@ -188,21 +178,16 @@ func SetupRouter(r *gin.Engine) {
 	rp.POST("/rtp/get", ApiPropsRtpGet)
 	rp.POST("/rtp/set", ApiPropsRtpSet)
 
-	// user group
+	// User group
 	var ru = ra.Group("/user")
 	ru.POST("/is", ApiUserIs)
 	ru.POST("/rename", ApiUserRename)
 	ru.POST("/secret", ApiUserSecret)
 	ru.POST("/delete", ApiUserDelete)
 
-	// club group
-	var rc = ra.Group("/club")
-	rc.POST("/list", ApiClubList)
-	rc.POST("/is", ApiClubIs)
-	rc.POST("/info", ApiClubInfo)
-	rc.POST("/jpfund", ApiClubJpfund)
-	rc.POST("/rename", ApiClubRename)
-	rc.POST("/cashin", ApiClubCashin)
+	// Club group – DISABLED (missing error constants and methods)
+	// var rc = ra.Group("/club")
+	// ...
 
 	// Cloudinary group
 	var rcloud = ra.Group("/cloudinary")
