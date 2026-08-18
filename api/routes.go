@@ -16,12 +16,12 @@ import (
 
 type Session = xorm.Session
 
-// Global database engines
+// Global database engines (these are initialized in cmd/startup.go)
 var XormStorage  *xorm.Engine
 var XormSpinlog  *xorm.Engine
 
-// Global config reference
-var Cfg = config.Cfg
+// Global config reference – already defined in auth.go, so do NOT redeclare here.
+// var Cfg = config.Cfg   // ← REMOVED to avoid duplicate
 
 // "Server" field for HTTP headers.
 var serverhdr = fmt.Sprintf("slotopol/%s (%s; %s)", config.BuildVers, runtime.GOOS, runtime.GOARCH)
@@ -63,22 +63,18 @@ type jerr struct {
 	error
 }
 
-// Unwrap returns inherited error object.
 func (err jerr) Unwrap() error {
 	return err.error
 }
 
-// MarshalJSON is standard JSON interface implementation to stream errors on Ajax.
 func (err jerr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(err.Error())
 }
 
-// MarshalYAML is YAML marshaler interface implementation to stream errors on Ajax.
 func (err jerr) MarshalYAML() (any, error) {
 	return err.Error(), nil
 }
 
-// MarshalXML is XML marshaler interface implementation to stream errors on Ajax.
 func (err jerr) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return e.EncodeElement(err.Error(), start)
 }
@@ -172,15 +168,15 @@ func SetupRouter(r *gin.Engine) {
 	rs.POST("/doubleup", ApiSlotDoubleup)
 	rs.POST("/collect", ApiSlotCollect)
 
-	// keno group
-	var rk = ra.Group("/keno")
-	rk.POST("/bet/get", ApiKenoBetGet)
-	rk.POST("/bet/set", ApiKenoBetSet)
-	rk.POST("/sel/get", ApiKenoSelGet)
-	rk.POST("/sel/set", ApiKenoSelSet)
-	rk.POST("/sel/getslice", ApiKenoSelGetSlice)
-	rk.POST("/sel/setslice", ApiKenoSelSetSlice)
-	rk.POST("/spin", ApiKenoSpin)
+	// keno group – temporarily disabled (missing implementations)
+	// var rk = ra.Group("/keno")
+	// rk.POST("/bet/get", ApiKenoBetGet)
+	// rk.POST("/bet/set", ApiKenoBetSet)
+	// rk.POST("/sel/get", ApiKenoSelGet)
+	// rk.POST("/sel/set", ApiKenoSelSet)
+	// rk.POST("/sel/getslice", ApiKenoSelGetSlice)
+	// rk.POST("/sel/setslice", ApiKenoSelSetSlice)
+	// rk.POST("/spin", ApiKenoSpin)
 
 	// properties group
 	var rp = ra.Group("/prop")
