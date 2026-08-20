@@ -20,7 +20,7 @@ go env GOOS GOARCH CGO_ENABLED
 echo "===== GO BUILD (verbose) ====="
 
 # Only build core server – no game providers
-TAGS="jsoniter prod"
+TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
 
 ldflags="-w -s -linkmode external -extldflags=-static"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
