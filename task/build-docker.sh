@@ -17,13 +17,10 @@ echo "===== BUILD ENVIRONMENT ====="
 go version
 go env GOOS GOARCH CGO_ENABLED
 
-echo "===== RUNNING GO VET (catch early errors) ====="
-go vet ./... || true  # Continue even if vet finds issues
-
 echo "===== GO BUILD (verbose) ====="
 
-# REMOVED "keno" to bypass type mismatches in Keno games
-TAGS="jsoniter prod full agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
+# Only build core server – no game providers
+TAGS="jsoniter prod"
 
 ldflags="-w -s -linkmode external -extldflags=-static"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
