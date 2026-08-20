@@ -1,9 +1,9 @@
 package api
 
 import (
-	"encoding/xml"
+    "encoding/xml"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 // ApiClubList returns list of all clubs.
