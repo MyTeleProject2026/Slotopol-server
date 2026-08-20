@@ -28,6 +28,8 @@ ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildTi
 
 echo "===== GO BUILD ====="
 
+set +e
+
 go build \
   -o /go/bin/app \
   -v \
@@ -36,6 +38,15 @@ go build \
   -trimpath \
   -ldflags="$ldflags" \
   "$wd"
+
+status=$?
+
+echo "===== GO BUILD EXIT CODE: $status ====="
+
+if [ "$status" -ne 0 ]; then
+    echo "===== GO BUILD FAILED ====="
+    exit "$status"
+fi
 
 echo "===== BUILD SUCCESS ====="
 ls -lh /go/bin/app
