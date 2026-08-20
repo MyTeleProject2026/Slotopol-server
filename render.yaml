@@ -1,12 +1,10 @@
 services:
   - type: web
     name: slotopol-server
-    runtime: go
+    runtime: image
     repo: https://github.com/MyTeleProject2026/Slotopol-server
     plan: starter
-    buildCommand: go build -tags netgo -ldflags "-s -w" -o slotopol-server
-    startCommand: ./slotopol-server -v web
-    healthCheckPath: /ping
+    dockerfilePath: Dockerfile
     envVars:
       - key: SLOTOPOL_DBDRIVER
         value: mysql
