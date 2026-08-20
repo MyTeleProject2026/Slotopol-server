@@ -60,17 +60,4 @@ require (
 	xorm.io/builder v0.3.13 // indirect
 )
 
-// Local replace to allow imports that use the historical path
-replace github.com/slotopol/server => ./
-
-// Advice: add to file `.vscode/settings.json` followed lines:
-// {
-//     "gopls": {
-//         "buildFlags": ["-tags", "full keno agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"],
-//     },
-//     "Lua.diagnostics.disable": ["lowercase-global"]
-// }
-
-// Advice: upgrade this file by command line
-//   go get -u ./...
-//   go mod tidy
+// remove the replace line – it's not needed
