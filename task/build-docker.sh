@@ -17,7 +17,10 @@ echo "===== BUILD ENVIRONMENT ====="
 go version
 go env GOOS GOARCH CGO_ENABLED
 
-echo "===== GO BUILD ====="
+echo "===== RUNNING GO VET (catch early errors) ====="
+go vet ./... || true  # Continue even if vet finds issues
+
+echo "===== GO BUILD (verbose) ====="
 
 TAGS="jsoniter prod full keno agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
 
@@ -25,9 +28,10 @@ ldflags="-w -s -linkmode external -extldflags=-static"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=$buildtime"
 
-# Capture build output and preserve error status
+# Build with -x to see all commands, and redirect stderr to stdout
 set +e
 build_output=$(go build \
+  -x \
   -o /go/bin/app \
   -v \
   -tags="$TAGS" \
@@ -38,7 +42,7 @@ build_output=$(go build \
 status=$?
 set -e
 
-# Print the full output (including any errors)
+# Print the full output (this will now include all compiler errors)
 echo "$build_output"
 
 if [ $status -ne 0 ]; then
