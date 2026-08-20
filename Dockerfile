@@ -1,42 +1,36 @@
-# Typical usage:
-#   docker build --progress=plain --pull --rm -f "Dockerfile" -t schwarzlichtbezirk/slotopol:latest "."
-#   docker run -d -p 8080:8080 schwarzlichtbezirk/slotopol
-
-##
-## Build stage
-##
-
-# Use image with golang last version as builder.
+# Build stage
 FROM golang:1.25-bookworm AS build
 
-# Make project root folder as current dir.
+# Install C libraries for SQLite (and static linking)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libc-dev \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /go/src/github.com/MyTeleProject2026/Slotopol-server
-# Copy only go.mod and go.sum to prevent downloads all dependencies again on any code changes.
+
+# Copy go.mod and go.sum first to cache dependencies
 COPY go.mod go.sum ./
-# Download all dependencies pointed at go.mod file.
 RUN go mod download
-# Copy all files and subfolders in current state as is.
+
+# Copy the rest of the source
 COPY . .
 
-# Set executable rights to all shell-scripts.
+# Make build scripts executable
 RUN chmod +x ./task/*.sh
-# Compile project for Linux amd64.
+
+# Compile with all required tags and static linking
 RUN ./task/build-docker.sh
 
-##
-## Deploy stage
-##
-
-# Thin deploy image.
+# Deploy stage
 FROM scratch
 
-# Copy compiled executable and configuration files to new image destination.
-COPY --from=build /go/bin /go/bin
+# Copy the binary and configuration
+COPY --from=build /go/bin/app /go/bin/app
+COPY --from=build /go/src/github.com/MyTeleProject2026/Slotopol-server/appdata /appdata
 
-# Open REST listen port.
 EXPOSE 8080
 
-# Run application with full path representation.
-# Without shell to get signal for graceful shutdown.
 ENTRYPOINT ["/go/bin/app"]
 CMD ["-v", "web"]
