@@ -5,7 +5,8 @@
 services:
 
   slotopol:
-    image: schwarzlichtbezirk/slotopol:latest
+    # CHANGE: Use your locally built image instead of a public old one
+    image: slotopol-server:latest 
     container_name: slotopol-srv
     depends_on:
       - database
