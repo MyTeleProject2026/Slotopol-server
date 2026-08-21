@@ -8,7 +8,6 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/lib/pq v1.12.3
-	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/schwarzlichtbezirk/go-disk-usage v1.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -59,5 +58,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	xorm.io/builder v0.3.13 // indirect
 )
-
-// remove the replace line – it's not needed
