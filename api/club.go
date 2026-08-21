@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ApiClubList returns list of all clubs.
 func ApiClubList(c *gin.Context) {
 	var ret struct {
 		XMLName xml.Name    `json:"-" yaml:"-" xml:"ret"`
@@ -14,7 +13,8 @@ func ApiClubList(c *gin.Context) {
 	}
 
 	admin, al := MustAdmin(c, 0)
-	if admin == nil || al&ALadmin == 0 {
+	// Allow if admin has ALadmin for club 0, OR has global admin rights (GAL)
+	if admin == nil || (al&ALadmin == 0 && admin.GAL&ALadmin == 0) {
 		Ret403(c, AEC_club_list_noaccess, ErrNoAccess)
 		return
 	}
@@ -25,6 +25,7 @@ func ApiClubList(c *gin.Context) {
 
 	RetOk(c, ret)
 }
+
 
 // ApiClubIs checks if a club exists.
 func ApiClubIs(c *gin.Context) {
