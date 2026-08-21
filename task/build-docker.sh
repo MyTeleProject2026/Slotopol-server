@@ -19,7 +19,8 @@ go env GOOS GOARCH CGO_ENABLED
 
 echo "===== GO BUILD ====="
 
-TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech "
+# This is the critical line. It MUST be exactly this.
+TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
 
 ldflags="-w -s"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
