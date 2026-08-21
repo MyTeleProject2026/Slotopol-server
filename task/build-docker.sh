@@ -11,7 +11,7 @@ buildtime="$(date +'%FT%T.%3NZ')"
 
 export GOOS=linux
 export GOARCH=amd64
-export CGO_ENABLED=1
+export CGO_ENABLED=0   # <-- disable CGO
 
 echo "===== BUILD ENVIRONMENT ====="
 go version
@@ -19,10 +19,10 @@ go env GOOS GOARCH CGO_ENABLED
 
 echo "===== GO BUILD (verbose) ====="
 
-# Only build core server – no game providers
+# Include game provider tags as needed (exclude keno)
 TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
 
-ldflags="-w -s -linkmode external -extldflags=-static"
+ldflags="-w -s"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=$buildtime"
 
