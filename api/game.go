@@ -74,26 +74,36 @@ func ApiGameList(c *gin.Context) {
 	var alg = map[*game.AlgDescr]int{}
 	var prov = map[string]int{}
 	var gamelist = make([]*game.GameInfo, 0, 256)
-	for _, gi := range game.InfoMap {
+
+	// Build list of GameInfo along with their aliases (the map key)
+	// We'll store them in a slice of structs for later filtering
+	type gameWithAlias struct {
+		Alias string
+		Info  *game.GameInfo
+	}
+	var gamesWithAlias []gameWithAlias
+
+	for alias, gi := range game.InfoMap {
 		if game.Passes(gi, finclist, fexclist) {
 			alg[gi.AlgDescr]++
 			prov[util.ToID(gi.Prov)]++
-			gamelist = append(gamelist, gi)
+			gamesWithAlias = append(gamesWithAlias, gameWithAlias{Alias: alias, Info: gi})
 		}
 	}
 
-	sort.Slice(gamelist, func(i, j int) bool {
-		var gii, gij = gamelist[i], gamelist[j]
+	// Sort by name or provider
+	sort.Slice(gamesWithAlias, func(i, j int) bool {
+		gii, gij := gamesWithAlias[i], gamesWithAlias[j]
 		if arg.Sort {
-			if gii.Prov == gij.Prov {
-				return gii.Name < gij.Name
+			if gii.Info.Prov == gij.Info.Prov {
+				return gii.Info.Name < gij.Info.Name
 			}
-			return gii.Prov < gij.Prov
+			return gii.Info.Prov < gij.Info.Prov
 		} else {
-			if gii.Name == gij.Name {
-				return gii.Prov < gij.Prov
+			if gii.Info.Name == gij.Info.Name {
+				return gii.Info.Prov < gij.Info.Prov
 			}
-			return gii.Name < gij.Name
+			return gii.Info.Name < gij.Info.Name
 		}
 	})
 
@@ -110,13 +120,18 @@ func ApiGameList(c *gin.Context) {
 		for _, alias := range enabled {
 			enabledSet[alias] = true
 		}
-		filtered := make([]*game.GameInfo, 0, len(gamelist))
-		for _, gi := range gamelist {
-			if enabledSet[gi.GetID()] {   // <-- FIXED HERE
-				filtered = append(filtered, gi)
+		filtered := make([]*game.GameInfo, 0, len(gamesWithAlias))
+		for _, gwa := range gamesWithAlias {
+			if enabledSet[gwa.Alias] {
+				filtered = append(filtered, gwa.Info)
 			}
 		}
 		gamelist = filtered
+	} else {
+		// No CID filter: return all
+		for _, gwa := range gamesWithAlias {
+			gamelist = append(gamelist, gwa.Info)
+		}
 	}
 
 	ret.List = gamelist
