@@ -1,13 +1,6 @@
 package cmd
 
 import (
-	// Keno
-	_ "github.com/MyTeleProject2026/Slotopol-server/game/keno/americankeno"
-	_ "github.com/MyTeleProject2026/Slotopol-server/game/keno/firekeno"
-	_ "github.com/MyTeleProject2026/Slotopol-server/game/keno/kenocenturion"
-	_ "github.com/MyTeleProject2026/Slotopol-server/game/keno/kenofast"
-	_ "github.com/MyTeleProject2026/Slotopol-server/game/keno/kenoluxury"
-
 	// AGT
 	_ "github.com/MyTeleProject2026/Slotopol-server/game/slot/agt/aislot"
 	_ "github.com/MyTeleProject2026/Slotopol-server/game/slot/agt/aladdin"
