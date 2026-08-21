@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-//go:embed slot/*/*.yaml
+//go:embed slot/*/*/*.yaml
 var embeddedYAML embed.FS
 
 func init() {
