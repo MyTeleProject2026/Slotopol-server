@@ -17,7 +17,7 @@ echo "===== BUILD ENVIRONMENT ====="
 go version
 go env GOOS GOARCH CGO_ENABLED
 
-echo "===== GO BUILD (verbose) ====="
+echo "===== GO BUILD ====="
 
 TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
 
@@ -25,20 +25,17 @@ ldflags="-w -s"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=$buildtime"
 
+# Build with error output captured
 set +e
-build_output=$(go build \
-  -x \
+go build \
   -o /go/bin/app \
-  -v \
   -tags="$TAGS" \
   -buildvcs=false \
   -trimpath \
   -ldflags="$ldflags" \
-  "$wd" 2>&1)
+  "$wd" 2>&1
 status=$?
 set -e
-
-echo "$build_output"
 
 if [ $status -ne 0 ]; then
     echo "===== GO BUILD EXIT CODE: $status ====="
