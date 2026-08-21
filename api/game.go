@@ -112,7 +112,7 @@ func ApiGameList(c *gin.Context) {
 		}
 		filtered := make([]*game.GameInfo, 0, len(gamelist))
 		for _, gi := range gamelist {
-			if enabledSet[gi.GetID()] {
+			if enabledSet[gi.GetID()] {   // <-- FIXED HERE
 				filtered = append(filtered, gi)
 			}
 		}
