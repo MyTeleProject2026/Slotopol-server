@@ -9,14 +9,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /go/src/github.com/MyTeleProject2026/Slotopol-server
 
-# Copy only go.mod – go.sum will be generated
+# Copy go.mod first to cache dependency downloads
 COPY go.mod ./
+RUN go mod download
 
-# Download dependencies AND tidy to generate a complete go.sum
-RUN go mod download && go mod tidy
-
-# Copy the rest of the source (go.sum is ignored via .dockerignore)
+# Now copy the entire source code (go.sum is excluded via .dockerignore)
 COPY . .
+
+# Run go mod tidy now that source is present – this generates a complete go.sum
+RUN go mod tidy
 
 # Make build scripts executable
 RUN chmod +x ./task/*.sh
