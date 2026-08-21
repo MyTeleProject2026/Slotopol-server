@@ -205,4 +205,13 @@ func SetupRouter(r *gin.Engine) {
 	rcloud.POST("/upload", ApiUploadImage)
 	rcloud.GET("/images", ApiGetImages)
 	rcloud.DELETE("/image", ApiDeleteImage)
+
+	// ===== NEW ADMIN ENDPOINTS =====
+	// Admin allocation endpoints
+	ra.POST("/admin/allocate", ApiAllocationCreate)
+	ra.POST("/admin/allocation/approve", ApiAllocationApprove)
+	ra.GET("/admin/allocations", ApiAllocationList)
+
+	// Admin game permission endpoints
+	ra.POST("/admin/game/permission", ApiGamePermissionSet)
 }
