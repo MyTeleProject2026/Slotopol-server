@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io/fs"
 	"path/filepath"
+	"strings"
 )
 
 //go:embed slot/*/*/*.yaml
@@ -14,6 +15,11 @@ func init() {
 		if err != nil || d.IsDir() {
 			return nil
 		}
+		// Skip raw data and bonus directories
+		if strings.Contains(path, "/graw/") || strings.Contains(path, "/bon/") {
+			return nil
+		}
+		// Skip non-YAML files
 		if filepath.Ext(path) != ".yaml" {
 			return nil
 		}
