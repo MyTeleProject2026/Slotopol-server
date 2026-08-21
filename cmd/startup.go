@@ -172,20 +172,19 @@ func InitStorage() (err error) {
 		log.Printf("club db: %s\n", Cfg.DriverName)
 	}
 
-	// === NEW: Connection pool settings ===
+	// Connection pool settings
 	api.XormStorage.SetMaxOpenConns(10)
 	api.XormStorage.SetMaxIdleConns(5)
 	api.XormStorage.SetConnMaxLifetime(30 * time.Minute)
 	api.XormStorage.SetConnMaxIdleTime(10 * time.Minute)
 
-	// === NEW: Background keep‑alive ping ===
+	// Background keep‑alive ping
 	go func() {
 		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
 		for range ticker.C {
 			if err := api.XormStorage.Ping(); err != nil {
 				log.Printf("Database ping failed: %v", err)
-				// Optionally try to reconnect – XORM will handle it on next query
 			}
 		}
 	}()
@@ -438,6 +437,11 @@ func SqlLoop(exitctx context.Context) {
 }
 
 func InitSQL() (err error) {
+	// ✅ NEW: Load embedded YAMLs (games) BEFORE initializing storage
+	LoadInternalYaml(context.Background())
+	UpdateAlgList()
+	CheckAlgList()
+
 	if err = InitStorage(); err != nil {
 		err = fmt.Errorf("can not init XORM records storage: %w", err)
 		return
