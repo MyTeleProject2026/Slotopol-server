@@ -61,6 +61,7 @@ var FiltMap = map[string]Filter{
 	"big":    func(gi *GameInfo) bool { return gi.GT == GTslot && gi.GP&GPbsym > 0 },
 	"nodate": func(gi *GameInfo) bool { return gi.Date == 0 },
 }
+
 var (
 	reReel = regexp.MustCompile(`^(\d)x$`)
 	reScrn = regexp.MustCompile(`^(\d)x(\d)$`)
