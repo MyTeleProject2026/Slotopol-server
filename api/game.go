@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/MyTeleProject2026/Slotopol-server/config"
 	"github.com/MyTeleProject2026/Slotopol-server/game"
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
@@ -24,6 +25,7 @@ func ApiGameList(c *gin.Context) {
 		Include string   `json:"include" yaml:"include" xml:"include" form:"inc"`
 		Exclude string   `json:"exclude" yaml:"exclude" xml:"exclude" form:"exc"`
 		Sort    bool     `json:"sort" yaml:"sort" xml:"sort" form:"sort"`
+		CID     uint64   `json:"cid" yaml:"cid" xml:"cid" form:"cid"` // NEW: filter by club permissions
 	}
 	var ret struct {
 		XMLName xml.Name         `json:"-" yaml:"-" xml:"ret"`
@@ -94,6 +96,29 @@ func ApiGameList(c *gin.Context) {
 			return gii.Name < gij.Name
 		}
 	})
+
+	// NEW: Filter by club permissions if CID is provided
+	if arg.CID != 0 {
+		var enabled []string
+		if err := XormStorage.Table("club_game_permissions").
+			Where("club_id=? AND enabled=1", arg.CID).
+			Select("game_alias").Find(&enabled); err != nil {
+			Ret500(c, 0, err)
+			return
+		}
+		// Create a set for fast lookup
+		enabledSet := make(map[string]bool)
+		for _, alias := range enabled {
+			enabledSet[alias] = true
+		}
+		filtered := make([]*game.GameInfo, 0, len(gamelist))
+		for _, gi := range gamelist {
+			if enabledSet[gi.Alias] {
+				filtered = append(filtered, gi)
+			}
+		}
+		gamelist = filtered
+	}
 
 	ret.List = gamelist
 	ret.AlgNum = len(alg)
@@ -171,7 +196,7 @@ func ApiGameNew(c *gin.Context) {
 	}
 
 	// Insert new story entry
-	if Cfg.ClubInsertBuffer > 1 {
+	if config.Cfg.ClubInsertBuffer > 1 {
 		go JoinBuf.Join(XormStorage, &scene.Story)
 	} else if err = JoinBuf.Join(XormStorage, &scene.Story); err != nil {
 		Ret500(c, 0, err)
