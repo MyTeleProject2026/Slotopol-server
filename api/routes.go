@@ -164,15 +164,7 @@ func SetupRouter(r *gin.Engine) {
 	rs.POST("/doubleup", ApiSlotDoubleup)
 	rs.POST("/collect", ApiSlotCollect)
 
-	// Keno group
-	var rk = ra.Group("/keno")
-	rk.POST("/bet/get", ApiKenoBetGet)
-	rk.POST("/bet/set", ApiKenoBetSet)
-	rk.POST("/sel/get", ApiKenoSelGet)
-	rk.POST("/sel/set", ApiKenoSelSet)
-	rk.POST("/sel/getslice", ApiKenoSelGetSlice)
-	rk.POST("/sel/setslice", ApiKenoSelSetSlice)
-	rk.POST("/spin", ApiKenoSpin)
+	// ===== KENO GROUP REMOVED =====
 
 	// Properties group
 	var rp = ra.Group("/prop")
