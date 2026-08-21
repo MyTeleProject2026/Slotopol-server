@@ -25,7 +25,7 @@ func ApiGameList(c *gin.Context) {
 		Include string   `json:"include" yaml:"include" xml:"include" form:"inc"`
 		Exclude string   `json:"exclude" yaml:"exclude" xml:"exclude" form:"exc"`
 		Sort    bool     `json:"sort" yaml:"sort" xml:"sort" form:"sort"`
-		CID     uint64   `json:"cid" yaml:"cid" xml:"cid" form:"cid"` // NEW: filter by club permissions
+		CID     uint64   `json:"cid" yaml:"cid" xml:"cid" form:"cid"`
 	}
 	var ret struct {
 		XMLName xml.Name         `json:"-" yaml:"-" xml:"ret"`
@@ -97,7 +97,7 @@ func ApiGameList(c *gin.Context) {
 		}
 	})
 
-	// NEW: Filter by club permissions if CID is provided
+	// Filter by club permissions if CID is provided
 	if arg.CID != 0 {
 		var enabled []string
 		if err := XormStorage.Table("club_game_permissions").
@@ -106,14 +106,13 @@ func ApiGameList(c *gin.Context) {
 			Ret500(c, 0, err)
 			return
 		}
-		// Create a set for fast lookup
 		enabledSet := make(map[string]bool)
 		for _, alias := range enabled {
 			enabledSet[alias] = true
 		}
 		filtered := make([]*game.GameInfo, 0, len(gamelist))
 		for _, gi := range gamelist {
-			if enabledSet[gi.Alias] {
+			if enabledSet[gi.Aliases[0].String()] {
 				filtered = append(filtered, gi)
 			}
 		}
