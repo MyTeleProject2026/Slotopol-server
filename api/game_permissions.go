@@ -12,6 +12,7 @@ type ClubGamePermission struct {
 	Enabled   bool   `xorm:"enabled" json:"enabled" yaml:"enabled" xml:"enabled"`
 }
 
+// ApiGamePermissionSet – Enable or disable a game for a specific club
 func ApiGamePermissionSet(c *gin.Context) {
 	var arg struct {
 		XMLName   xml.Name `json:"-" yaml:"-" xml:"arg"`
@@ -28,15 +29,15 @@ func ApiGamePermissionSet(c *gin.Context) {
 		Ret403(c, 0, ErrNoAccess)
 		return
 	}
-	// Upsert
 	perm := ClubGamePermission{
 		ClubID:    arg.ClubID,
 		GameAlias: arg.GameAlias,
 		Enabled:   arg.Enabled,
 	}
+	// Upsert: try insert, update if exists
 	_, err := XormStorage.InsertOne(&perm)
 	if err != nil {
-		// Already exists? Update
+		// Already exists → update
 		if _, err2 := XormStorage.Where("club_id=? AND game_alias=?", arg.ClubID, arg.GameAlias).
 			Cols("enabled").Update(&perm); err2 != nil {
 			Ret500(c, 0, err2)
@@ -45,6 +46,3 @@ func ApiGamePermissionSet(c *gin.Context) {
 	}
 	Ret204(c)
 }
-
-// Modify ApiGameList in api/game.go to filter by permissions
-// (you'll need to pass cid in the request and join with permissions table)
