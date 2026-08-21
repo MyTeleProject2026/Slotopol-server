@@ -6,21 +6,22 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/MyTeleProject2026/Slotopol-server/config"
+	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
 type Allocation struct {
-	ID            uint64    `xorm:"id" json:"id" yaml:"id" xml:"id,attr"`
-	TransactionID string    `xorm:"transaction_id" json:"transaction_id" yaml:"transaction_id" xml:"transaction_id"`
-	ClubID        uint64    `xorm:"club_id" json:"club_id" yaml:"club_id" xml:"club_id"`
-	Amount        float64   `xorm:"amount" json:"amount" yaml:"amount" xml:"amount"`
-	Type          string    `xorm:"type" json:"type" yaml:"type" xml:"type"`
-	Status        string    `xorm:"status" json:"status" yaml:"status" xml:"status"`
-	CreatedAt     time.Time `xorm:"created_at" json:"created_at" yaml:"created_at" xml:"created_at"`
+	ID            uint64     `xorm:"id" json:"id" yaml:"id" xml:"id,attr"`
+	TransactionID string     `xorm:"transaction_id" json:"transaction_id" yaml:"transaction_id" xml:"transaction_id"`
+	ClubID        uint64     `xorm:"club_id" json:"club_id" yaml:"club_id" xml:"club_id"`
+	Amount        float64    `xorm:"amount" json:"amount" yaml:"amount" xml:"amount"`
+	Type          string     `xorm:"type" json:"type" yaml:"type" xml:"type"`
+	Status        string     `xorm:"status" json:"status" yaml:"status" xml:"status"`
+	CreatedAt     time.Time  `xorm:"created_at" json:"created_at" yaml:"created_at" xml:"created_at"`
 	ApprovedAt    *time.Time `xorm:"approved_at" json:"approved_at,omitempty" yaml:"approved_at,omitempty" xml:"approved_at,omitempty"`
-	Note          string    `xorm:"note" json:"note,omitempty" yaml:"note,omitempty" xml:"note,omitempty"`
+	Note          string     `xorm:"note" json:"note,omitempty" yaml:"note,omitempty" xml:"note,omitempty"`
 }
 
+// ApiAllocationCreate – Request a new allocation (status = PENDING)
 func ApiAllocationCreate(c *gin.Context) {
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
@@ -57,6 +58,7 @@ func ApiAllocationCreate(c *gin.Context) {
 	RetOk(c, alloc)
 }
 
+// ApiAllocationApprove – Approve a pending allocation (updates club bank)
 func ApiAllocationApprove(c *gin.Context) {
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
@@ -73,7 +75,7 @@ func ApiAllocationApprove(c *gin.Context) {
 	}
 	var alloc Allocation
 	if has, err := XormStorage.ID(arg.ID).Get(&alloc); err != nil || !has {
-		Ret404(c, 0, ErrNotFound)
+		Ret404(c, 0, errors.New("allocation not found"))
 		return
 	}
 	if alloc.Status != "PENDING" {
@@ -83,6 +85,7 @@ func ApiAllocationApprove(c *gin.Context) {
 	now := time.Now()
 	alloc.Status = "APPROVED"
 	alloc.ApprovedAt = &now
+
 	session := XormStorage.NewSession()
 	defer session.Close()
 	if err := session.Begin(); err != nil {
@@ -107,6 +110,7 @@ func ApiAllocationApprove(c *gin.Context) {
 	Ret204(c)
 }
 
+// ApiAllocationList – List all allocations (requires admin)
 func ApiAllocationList(c *gin.Context) {
 	admin, al := MustAdmin(c, 0)
 	if admin == nil || al&ALadmin == 0 {
