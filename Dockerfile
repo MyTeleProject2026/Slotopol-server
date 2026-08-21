@@ -15,7 +15,7 @@ COPY go.mod ./
 # Download dependencies AND tidy to generate a complete go.sum
 RUN go mod download && go mod tidy
 
-# Copy the rest of the source (go.sum is now present and will NOT be overwritten)
+# Copy the rest of the source (go.sum is ignored via .dockerignore)
 COPY . .
 
 # Make build scripts executable
