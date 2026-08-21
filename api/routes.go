@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"os" // <-- ADDED for CORS
 	"runtime"
 
 	"github.com/gin-gonic/gin"
@@ -125,7 +126,29 @@ func Ret500(c *gin.Context, code int, err error) {
 	RetErr(c, http.StatusInternalServerError, code, err)
 }
 
+// CorsMiddleware adds CORS headers to allow your Admin frontend to call the API.
+func CorsMiddleware(allowedOrigin string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if allowedOrigin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+		}
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+
+		// Handle preflight (OPTIONS) requests
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
+}
+
 func SetupRouter(r *gin.Engine) {
+	// Read the admin origin from environment variable
+	adminOrigin := os.Getenv("SLOTOPOL_ADMIN_ORIGIN")
+	r.Use(CorsMiddleware(adminOrigin))
+
 	r.NoRoute(Handle404)
 	r.NoMethod(Handle405)
 
