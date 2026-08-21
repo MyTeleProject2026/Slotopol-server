@@ -11,7 +11,7 @@ buildtime="$(date +'%FT%T.%3NZ')"
 
 export GOOS=linux
 export GOARCH=amd64
-export CGO_ENABLED=0   # <-- disable CGO
+export CGO_ENABLED=0   # <-- critical: no CGO
 
 echo "===== BUILD ENVIRONMENT ====="
 go version
@@ -19,7 +19,7 @@ go env GOOS GOARCH CGO_ENABLED
 
 echo "===== GO BUILD (verbose) ====="
 
-# Include game provider tags as needed (exclude keno)
+# Use only the providers you need (keno excluded)
 TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
 
 ldflags="-w -s"
