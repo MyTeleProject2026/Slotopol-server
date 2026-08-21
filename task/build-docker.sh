@@ -19,14 +19,12 @@ go env GOOS GOARCH CGO_ENABLED
 
 echo "===== GO BUILD ====="
 
-# This is the critical line. It MUST be exactly this.
 TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
 
 ldflags="-w -s"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=$buildtime"
 
-# Build with error output captured
 set +e
 go build \
   -o /go/bin/app \
