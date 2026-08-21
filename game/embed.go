@@ -19,15 +19,21 @@ func init() {
 			return nil
 		}
 		data, _ := embeddedYAML.ReadFile(path)
+		content := string(data)
 
-		// Get the first line of the file content
-		firstLine := string(data)
-		if idx := strings.Index(firstLine, "\n"); idx >= 0 {
-			firstLine = firstLine[:idx]
+		// Find the first non‑empty, non‑comment line
+		var firstLine string
+		for _, line := range strings.Split(content, "\n") {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+				continue
+			}
+			firstLine = trimmed
+			break
 		}
 
-		// Skip raw data / bonus files (their first line contains /graw or /bon)
-		if strings.Contains(firstLine, "/graw") || strings.Contains(firstLine, "/bon") {
+		// Only keep reel definition files (first line ends with "/rmap")
+		if !strings.HasSuffix(firstLine, "/rmap") {
 			return nil
 		}
 
