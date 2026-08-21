@@ -15,15 +15,22 @@ func init() {
 		if err != nil || d.IsDir() {
 			return nil
 		}
-		// Skip raw data and bonus directories
-		if strings.Contains(path, "/graw/") || strings.Contains(path, "/bon/") {
-			return nil
-		}
-		// Skip non-YAML files
 		if filepath.Ext(path) != ".yaml" {
 			return nil
 		}
 		data, _ := embeddedYAML.ReadFile(path)
+
+		// Get the first line of the file content
+		firstLine := string(data)
+		if idx := strings.Index(firstLine, "\n"); idx >= 0 {
+			firstLine = firstLine[:idx]
+		}
+
+		// Skip raw data / bonus files (their first line contains /graw or /bon)
+		if strings.Contains(firstLine, "/graw") || strings.Contains(firstLine, "/bon") {
+			return nil
+		}
+
 		LoadMap = append(LoadMap, data)
 		return nil
 	})
