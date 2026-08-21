@@ -12,12 +12,10 @@ import (
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
-// ApiGameAlgs returns full list of all available algorithms.
 func ApiGameAlgs(c *gin.Context) {
 	RetOk(c, game.AlgList)
 }
 
-// ApiGameList returns list of available games selected by filters.
 func ApiGameList(c *gin.Context) {
 	var err error
 	var arg struct {
@@ -74,40 +72,30 @@ func ApiGameList(c *gin.Context) {
 	var alg = map[*game.AlgDescr]int{}
 	var prov = map[string]int{}
 	var gamelist = make([]*game.GameInfo, 0, 256)
-
-	// Build list of GameInfo along with their aliases (the map key)
-	// We'll store them in a slice of structs for later filtering
-	type gameWithAlias struct {
-		Alias string
-		Info  *game.GameInfo
-	}
-	var gamesWithAlias []gameWithAlias
-
-	for alias, gi := range game.InfoMap {
+	for _, gi := range game.InfoMap {
 		if game.Passes(gi, finclist, fexclist) {
 			alg[gi.AlgDescr]++
 			prov[util.ToID(gi.Prov)]++
-			gamesWithAlias = append(gamesWithAlias, gameWithAlias{Alias: alias, Info: gi})
+			gamelist = append(gamelist, gi)
 		}
 	}
 
-	// Sort by name or provider
-	sort.Slice(gamesWithAlias, func(i, j int) bool {
-		gii, gij := gamesWithAlias[i], gamesWithAlias[j]
+	sort.Slice(gamelist, func(i, j int) bool {
+		var gii, gij = gamelist[i], gamelist[j]
 		if arg.Sort {
-			if gii.Info.Prov == gij.Info.Prov {
-				return gii.Info.Name < gij.Info.Name
+			if gii.Prov == gij.Prov {
+				return gii.Name < gij.Name
 			}
-			return gii.Info.Prov < gij.Info.Prov
+			return gii.Prov < gij.Prov
 		} else {
-			if gii.Info.Name == gij.Info.Name {
-				return gii.Info.Prov < gij.Info.Prov
+			if gii.Name == gij.Name {
+				return gii.Prov < gij.Prov
 			}
-			return gii.Info.Name < gij.Info.Name
+			return gii.Name < gij.Name
 		}
 	})
 
-	// Filter by club permissions if CID is provided
+	// Filter by club permissions
 	if arg.CID != 0 {
 		var enabled []string
 		if err := XormStorage.Table("club_game_permissions").
@@ -120,18 +108,21 @@ func ApiGameList(c *gin.Context) {
 		for _, alias := range enabled {
 			enabledSet[alias] = true
 		}
-		filtered := make([]*game.GameInfo, 0, len(gamesWithAlias))
-		for _, gwa := range gamesWithAlias {
-			if enabledSet[gwa.Alias] {
-				filtered = append(filtered, gwa.Info)
+
+		// Force enable all games if no permissions exist
+		if len(enabled) == 0 {
+			for _, gi := range gamelist {
+				enabledSet[gi.GameAlias.ID()] = true
+			}
+		}
+
+		filtered := make([]*game.GameInfo, 0, len(gamelist))
+		for _, gi := range gamelist {
+			if enabledSet[gi.GameAlias.ID()] {
+				filtered = append(filtered, gi)
 			}
 		}
 		gamelist = filtered
-	} else {
-		// No CID filter: return all
-		for _, gwa := range gamesWithAlias {
-			gamelist = append(gamelist, gwa.Info)
-		}
 	}
 
 	ret.List = gamelist
@@ -148,7 +139,6 @@ var (
 	JoinBuf = SqlStory{}
 )
 
-// ApiGameNew creates a new instance of game.
 func ApiGameNew(c *gin.Context) {
 	var err error
 	var ok bool
@@ -209,7 +199,6 @@ func ApiGameNew(c *gin.Context) {
 		Game: anygame,
 	}
 
-	// Insert new story entry
 	if config.Cfg.ClubInsertBuffer > 1 {
 		go JoinBuf.Join(XormStorage, &scene.Story)
 	} else if err = JoinBuf.Join(XormStorage, &scene.Story); err != nil {
@@ -226,7 +215,6 @@ func ApiGameNew(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// ApiGameJoin joins an existing game.
 func ApiGameJoin(c *gin.Context) {
 	var err error
 	var ok bool
@@ -273,7 +261,6 @@ func ApiGameJoin(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// ApiGameInfo returns full info of game scene with given GID.
 func ApiGameInfo(c *gin.Context) {
 	var err error
 	var ok bool
@@ -332,7 +319,6 @@ func ApiGameInfo(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-// ApiGameRtpGet returns master RTP for given GID.
 func ApiGameRtpGet(c *gin.Context) {
 	var err error
 	var ok bool
