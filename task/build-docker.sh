@@ -19,8 +19,7 @@ go env GOOS GOARCH CGO_ENABLED
 
 echo "===== GO BUILD ====="
 
-# This line already contains ALL your slot game providers!
-TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech"
+TAGS="jsoniter prod agt aristocrat betsoft ct igt megajack netent novomatic playngo playtech "
 
 ldflags="-w -s"
 ldflags="$ldflags -X github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers"
