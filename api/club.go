@@ -26,7 +26,6 @@ func ApiClubList(c *gin.Context) {
 	RetOk(c, ret)
 }
 
-
 // ApiClubIs checks if a club exists.
 func ApiClubIs(c *gin.Context) {
 	var arg struct {
