@@ -29,15 +29,7 @@ func ApiGamePermissionSet(c *gin.Context) {
 		return
 	}
 
-	// ⚠️ FALLBACK: Ignore all database errors and just return success.
-	// (This prevents the 500 error and lets the UI update.)
-	perm := ClubGamePermission{
-		ClubID:    arg.ClubID,
-		GameAlias: arg.GameAlias,
-		Enabled:   arg.Enabled,
-	}
-
-	// Try to insert/update, but ignore errors (the table might not exist yet)
+	// ✅ Auto-create table if missing
 	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS club_game_permissions (
 		club_id BIGINT UNSIGNED NOT NULL,
 		game_alias VARCHAR(128) NOT NULL,
@@ -45,16 +37,30 @@ func ApiGamePermissionSet(c *gin.Context) {
 		PRIMARY KEY (club_id, game_alias)
 	)`)
 
-	_, err := XormStorage.InsertOne(&perm)
+	perm := ClubGamePermission{
+		ClubID:    arg.ClubID,
+		GameAlias: arg.GameAlias,
+		Enabled:   arg.Enabled,
+	}
+
+	// ✅ FIRST: Try to update existing row
+	updated, err := XormStorage.Where("club_id=? AND game_alias=?", arg.ClubID, arg.GameAlias).
+		Cols("enabled").
+		Update(&perm)
+
 	if err != nil {
-		// If insert fails, try update
-		_, err2 := XormStorage.Where("club_id=? AND game_alias=?", arg.ClubID, arg.GameAlias).
-			Cols("enabled").Update(&perm)
-		if err2 != nil {
-			// If update also fails, still return success to prevent the error
-			Ret204(c)
+		Ret500(c, 0, err)
+		return
+	}
+
+	// ✅ If no rows were updated, INSERT a new row
+	if updated == 0 {
+		_, err = XormStorage.InsertOne(&perm)
+		if err != nil {
+			Ret500(c, 0, err)
 			return
 		}
 	}
+
 	Ret204(c)
 }
