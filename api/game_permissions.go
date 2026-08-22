@@ -43,7 +43,7 @@ func ApiGamePermissionSet(c *gin.Context) {
 		Enabled:   arg.Enabled,
 	}
 
-	// ✅ First try to update an existing row (PLURAL)
+	// ✅ Try to update first (PLURAL)
 	updated, err := XormStorage.Where("club_id=? AND game_alias=?", arg.ClubID, arg.GameAlias).
 		Cols("enabled").
 		Update(&perm)
@@ -53,7 +53,7 @@ func ApiGamePermissionSet(c *gin.Context) {
 		return
 	}
 
-	// ✅ If no row was updated, insert a new one (PLURAL)
+	// ✅ If no rows updated, insert (PLURAL)
 	if updated == 0 {
 		_, err = XormStorage.InsertOne(&perm)
 		if err != nil {
