@@ -9,21 +9,23 @@ import (
 	"github.com/MyTeleProject2026/Slotopol-server/util"
 )
 
+// Allocation struct maps to the `allocation` table.
+// Using `xorm:"created"` on CreatedAt allows XORM to set it automatically.
 type Allocation struct {
-	ID            uint64     `xorm:"id" json:"id" yaml:"id" xml:"id,attr"`
+	ID            uint64     `xorm:"pk autoincr" json:"id" yaml:"id" xml:"id,attr"`
 	TransactionID string     `xorm:"transaction_id" json:"transaction_id" yaml:"transaction_id" xml:"transaction_id"`
 	ClubID        uint64     `xorm:"club_id" json:"club_id" yaml:"club_id" xml:"club_id"`
 	Amount        float64    `xorm:"amount" json:"amount" yaml:"amount" xml:"amount"`
 	Type          string     `xorm:"type" json:"type" yaml:"type" xml:"type"`
 	Status        string     `xorm:"status" json:"status" yaml:"status" xml:"status"`
-	CreatedAt     time.Time  `xorm:"created_at" json:"created_at" yaml:"created_at" xml:"created_at"`
+	CreatedAt     time.Time  `xorm:"created" json:"created_at" yaml:"created_at" xml:"created_at"`
 	ApprovedAt    *time.Time `xorm:"approved_at" json:"approved_at,omitempty" yaml:"approved_at,omitempty" xml:"approved_at,omitempty"`
 	Note          string     `xorm:"note" json:"note,omitempty" yaml:"note,omitempty" xml:"note,omitempty"`
 }
 
 // ApiAllocationCreate – Request a new allocation (status = PENDING)
 func ApiAllocationCreate(c *gin.Context) {
-	// ✅ Auto-create table if missing
+	// Auto‑create the table if it doesn't exist (no SQL needed by user)
 	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS allocation (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		transaction_id VARCHAR(64) NOT NULL UNIQUE,
@@ -73,6 +75,7 @@ func ApiAllocationCreate(c *gin.Context) {
 
 // ApiAllocationApprove – Approve a pending allocation (updates club bank)
 func ApiAllocationApprove(c *gin.Context) {
+	// Ensure table exists
 	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS allocation (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		transaction_id VARCHAR(64) NOT NULL UNIQUE,
@@ -110,6 +113,7 @@ func ApiAllocationApprove(c *gin.Context) {
 	now := time.Now()
 	alloc.Status = "APPROVED"
 	alloc.ApprovedAt = &now
+
 	session := XormStorage.NewSession()
 	defer session.Close()
 	if err := session.Begin(); err != nil {
@@ -121,6 +125,7 @@ func ApiAllocationApprove(c *gin.Context) {
 		Ret500(c, 0, err)
 		return
 	}
+	// Increase club bank
 	if _, err := session.Exec("UPDATE club SET bank=bank+? WHERE cid=?", alloc.Amount, alloc.ClubID); err != nil {
 		session.Rollback()
 		Ret500(c, 0, err)
@@ -135,6 +140,7 @@ func ApiAllocationApprove(c *gin.Context) {
 
 // ApiAllocationList – List all allocations (requires admin)
 func ApiAllocationList(c *gin.Context) {
+	// Ensure table exists
 	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS allocation (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		transaction_id VARCHAR(64) NOT NULL UNIQUE,
