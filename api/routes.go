@@ -5,7 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"os" // <-- ADDED for CORS
+	"os" // for CORS
 	"runtime"
 
 	"github.com/gin-gonic/gin"
@@ -17,11 +17,9 @@ import (
 
 type Session = xorm.Session
 
-// Global database engines (initialized in cmd/startup.go)
 var XormStorage *xorm.Engine
 var XormSpinlog *xorm.Engine
 
-// "Server" field for HTTP headers.
 var serverhdr = fmt.Sprintf("slotopol/%s (%s; %s)", config.BuildVers, runtime.GOOS, runtime.GOARCH)
 
 var Offered = []string{
@@ -61,18 +59,11 @@ type jerr struct {
 	error
 }
 
-func (err jerr) Unwrap() error {
-	return err.error
-}
-
+func (err jerr) Unwrap() error { return err.error }
 func (err jerr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(err.Error())
 }
-
-func (err jerr) MarshalYAML() (any, error) {
-	return err.Error(), nil
-}
-
+func (err jerr) MarshalYAML() (any, error) { return err.Error(), nil }
 func (err jerr) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return e.EncodeElement(err.Error(), start)
 }
@@ -88,9 +79,7 @@ func (err ajaxerr) Error() string {
 	return fmt.Sprintf("what: %s, code: %d", err.What, err.Code)
 }
 
-func (err ajaxerr) Unwrap() error {
-	return err.What.error
-}
+func (err ajaxerr) Unwrap() error { return err.What.error }
 
 func RetErr(c *gin.Context, status, code int, err error) {
 	var uid uint64
@@ -104,29 +93,17 @@ func RetErr(c *gin.Context, status, code int, err error) {
 	})
 }
 
-func Ret400(c *gin.Context, code int, err error) {
-	RetErr(c, http.StatusBadRequest, code, err)
-}
-
+func Ret400(c *gin.Context, code int, err error) { RetErr(c, http.StatusBadRequest, code, err) }
 func Ret401(c *gin.Context, code int, err error) {
 	c.Writer.Header().Add("WWW-Authenticate", realmBasic)
 	c.Writer.Header().Add("WWW-Authenticate", realmBearer)
 	RetErr(c, http.StatusUnauthorized, code, err)
 }
+func Ret403(c *gin.Context, code int, err error) { RetErr(c, http.StatusForbidden, code, err) }
+func Ret404(c *gin.Context, code int, err error) { RetErr(c, http.StatusNotFound, code, err) }
+func Ret500(c *gin.Context, code int, err error) { RetErr(c, http.StatusInternalServerError, code, err) }
 
-func Ret403(c *gin.Context, code int, err error) {
-	RetErr(c, http.StatusForbidden, code, err)
-}
-
-func Ret404(c *gin.Context, code int, err error) {
-	RetErr(c, http.StatusNotFound, code, err)
-}
-
-func Ret500(c *gin.Context, code int, err error) {
-	RetErr(c, http.StatusInternalServerError, code, err)
-}
-
-// CorsMiddleware adds CORS headers to allow your Admin frontend to call the API.
+// CorsMiddleware adds CORS headers.
 func CorsMiddleware(allowedOrigin string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if allowedOrigin != "" {
@@ -134,8 +111,6 @@ func CorsMiddleware(allowedOrigin string) gin.HandlerFunc {
 		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
-
-		// Handle preflight (OPTIONS) requests
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
@@ -145,7 +120,6 @@ func CorsMiddleware(allowedOrigin string) gin.HandlerFunc {
 }
 
 func SetupRouter(r *gin.Engine) {
-	// Read the admin origin from environment variable
 	adminOrigin := os.Getenv("SLOTOPOL_ADMIN_ORIGIN")
 	r.Use(CorsMiddleware(adminOrigin))
 
@@ -169,7 +143,7 @@ func SetupRouter(r *gin.Engine) {
 
 	// Common game group
 	r.GET("/game/algs", ApiGameAlgs)
-	r.GET("/game/list", ApiGameList)
+	r.GET("/game/list", ApiGameList) // ← CRITICAL
 	var rg = ra.Group("/game")
 	rg.POST("/new", ApiGameNew)
 	rg.POST("/join", ApiGameJoin)
@@ -186,8 +160,6 @@ func SetupRouter(r *gin.Engine) {
 	rs.POST("/spin", ApiSlotSpin)
 	rs.POST("/doubleup", ApiSlotDoubleup)
 	rs.POST("/collect", ApiSlotCollect)
-
-	// ===== KENO GROUP REMOVED =====
 
 	// Properties group
 	var rp = ra.Group("/prop")
@@ -221,12 +193,9 @@ func SetupRouter(r *gin.Engine) {
 	rcloud.GET("/images", ApiGetImages)
 	rcloud.DELETE("/image", ApiDeleteImage)
 
-	// ===== NEW ADMIN ENDPOINTS =====
-	// Admin allocation endpoints
+	// Admin endpoints
 	ra.POST("/admin/allocate", ApiAllocationCreate)
 	ra.POST("/admin/allocation/approve", ApiAllocationApprove)
 	ra.GET("/admin/allocations", ApiAllocationList)
-
-	// Admin game permission endpoints
 	ra.POST("/admin/game/permission", ApiGamePermissionSet)
 }
