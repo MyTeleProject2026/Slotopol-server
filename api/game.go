@@ -18,6 +18,7 @@ func ApiGameAlgs(c *gin.Context) {
 
 func ApiGameList(c *gin.Context) {
 	var err error
+
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
 		Include string   `json:"include" yaml:"include" xml:"include" form:"inc"`
@@ -25,6 +26,7 @@ func ApiGameList(c *gin.Context) {
 		Sort    bool     `json:"sort" yaml:"sort" xml:"sort" form:"sort"`
 		CID     uint64   `json:"cid" yaml:"cid" xml:"cid" form:"cid"`
 	}
+
 	var ret struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"ret"`
 		List    []gin.H  `json:"list" yaml:"list" xml:"list>gi"`
@@ -39,43 +41,69 @@ func ApiGameList(c *gin.Context) {
 
 	arg.Include = strings.TrimSpace(arg.Include)
 	arg.Exclude = strings.TrimSpace(arg.Exclude)
+
 	if arg.Include == "" {
 		arg.Include = "all"
 	}
-	var include = strings.Fields(arg.Include)
-	var exclude = strings.Fields(arg.Exclude)
+
+	include := strings.Fields(arg.Include)
+	exclude := strings.Fields(arg.Exclude)
 
 	var finclist, fexclist [][]game.Filter
 	var f game.Filter
 	var flist []game.Filter
+
 	for _, inc := range include {
-		var keys = strings.Split(inc, "&")
+		keys := strings.Split(inc, "&")
 		flist = nil
+
 		for _, key := range keys {
 			if f = game.GetFilter(key); f == nil {
-				Ret400(c, 0, fmt.Errorf("filter with name '%s' does not recognized", key))
+				Ret400(
+					c,
+					0,
+					fmt.Errorf(
+						"filter with name '%s' does not recognized",
+						key,
+					),
+				)
 				return
 			}
+
 			flist = append(flist, f)
 		}
+
 		finclist = append(finclist, flist)
 	}
+
 	for _, exc := range exclude {
-		var keys = strings.Split(exc, "&")
+		keys := strings.Split(exc, "&")
 		flist = nil
+
 		for _, key := range keys {
 			if f = game.GetFilter(key); f == nil {
-				Ret400(c, 0, fmt.Errorf("filter with name '%s' does not recognized", key))
+				Ret400(
+					c,
+					0,
+					fmt.Errorf(
+						"filter with name '%s' does not recognized",
+						key,
+					),
+				)
 				return
 			}
+
 			flist = append(flist, f)
 		}
+
 		fexclist = append(fexclist, flist)
 	}
 
-	var alg = map[*game.AlgDescr]int{}
-	var prov = map[string]int{}
-	var gamelist = make([]*game.GameInfo, 0, 256)
+	alg := map[*game.AlgDescr]int{}
+	prov := map[string]int{}
+
+	gamelist := make([]*game.GameInfo, 0, 256)
+
 	for _, gi := range game.InfoMap {
 		if game.Passes(gi, finclist, fexclist) {
 			alg[gi.AlgDescr]++
@@ -85,47 +113,40 @@ func ApiGameList(c *gin.Context) {
 	}
 
 	sort.Slice(gamelist, func(i, j int) bool {
-		var gii, gij = gamelist[i], gamelist[j]
+		gii := gamelist[i]
+		gij := gamelist[j]
+
 		if arg.Sort {
 			if gii.Prov == gij.Prov {
 				return gii.Name < gij.Name
 			}
+
 			return gii.Prov < gij.Prov
-		} else {
-			if gii.Name == gij.Name {
-				return gii.Prov < gij.Prov
-			}
-			return gii.Name < gij.Name
 		}
+
+		if gii.Name == gij.Name {
+			return gii.Prov < gij.Prov
+		}
+
+		return gii.Name < gij.Name
 	})
 
-	// Permission check
-	enabledSet := make(map[string]bool)
+	permissionMap := make(map[string]bool)
 
 	if arg.CID != 0 {
-		_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS club_game_permissions (
-			club_id BIGINT UNSIGNED NOT NULL,
-			game_alias VARCHAR(128) NOT NULL,
-			enabled BOOLEAN NOT NULL DEFAULT TRUE,
-			PRIMARY KEY (club_id, game_alias)
-		)`)
-
-		var enabled []string
-		if err := XormStorage.Table("club_game_permissions").
-			Where("club_id=? AND enabled=1", arg.CID).
-			Select("game_alias").Find(&enabled); err != nil {
-			enabledSet = map[string]bool{}
-		} else {
-			for _, alias := range enabled {
-				enabledSet[alias] = true
-			}
+		if permissionMap, err = GetGamePermissionMap(arg.CID); err != nil {
+			Ret500(c, 0, err)
+			return
 		}
 	}
 
-	var responseList []gin.H
+	responseList := make([]gin.H, 0, len(gamelist))
+
 	for _, gi := range gamelist {
-		alias := gi.Prov + " / " + gi.Name
+		gameID := util.ToID(gi.Prov + "/" + gi.Name)
+
 		responseList = append(responseList, gin.H{
+			"game_id": gameID,
 			"prov":    gi.Prov,
 			"name":    gi.Name,
 			"lnum":    gi.LNum,
@@ -139,7 +160,7 @@ func ApiGameList(c *gin.Context) {
 			"wn":      gi.WN,
 			"bn":      gi.BN,
 			"rtp":     gi.RTP,
-			"enabled": enabledSet[alias],
+			"enabled": permissionMap[gameID],
 		})
 	}
 
@@ -149,7 +170,6 @@ func ApiGameList(c *gin.Context) {
 
 	RetOk(c, ret)
 }
-
 var (
 	SpinBuf util.SqlBuf[Spinlog]
 	MultBuf util.SqlBuf[Multlog]
