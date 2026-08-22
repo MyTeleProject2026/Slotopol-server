@@ -170,6 +170,161 @@ func ApiGameList(c *gin.Context) {
 
 	RetOk(c, ret)
 }
+
+func ApiClubGameList(c *gin.Context) {
+	var err error
+
+	var arg struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
+		CID     uint64   `json:"cid" yaml:"cid" xml:"cid" form:"cid" binding:"required"`
+		Include string   `json:"include" yaml:"include" xml:"include" form:"inc"`
+		Exclude string   `json:"exclude" yaml:"exclude" xml:"exclude" form:"exc"`
+		Sort    bool     `json:"sort" yaml:"sort" xml:"sort" form:"sort"`
+	}
+
+	var ret struct {
+		XMLName xml.Name `json:"-" yaml:"-" xml:"ret"`
+		List    []gin.H  `json:"list" yaml:"list" xml:"list>gi"`
+	}
+
+	if err = c.ShouldBind(&arg); err != nil {
+		Ret400(c, 0, err)
+		return
+	}
+
+	if _, exists := Clubs.Get(arg.CID); !exists {
+		Ret404(c, 0, ErrNoClub)
+		return
+	}
+
+	arg.Include = strings.TrimSpace(arg.Include)
+	arg.Exclude = strings.TrimSpace(arg.Exclude)
+
+	if arg.Include == "" {
+		arg.Include = "all"
+	}
+
+	include := strings.Fields(arg.Include)
+	exclude := strings.Fields(arg.Exclude)
+
+	var finclist, fexclist [][]game.Filter
+	var flist []game.Filter
+	var f game.Filter
+
+	for _, inc := range include {
+		keys := strings.Split(inc, "&")
+		flist = nil
+
+		for _, key := range keys {
+			if f = game.GetFilter(key); f == nil {
+				Ret400(
+					c,
+					0,
+					fmt.Errorf(
+						"filter with name '%s' does not recognized",
+						key,
+					),
+				)
+				return
+			}
+
+			flist = append(flist, f)
+		}
+
+		finclist = append(finclist, flist)
+	}
+
+	for _, exc := range exclude {
+		keys := strings.Split(exc, "&")
+		flist = nil
+
+		for _, key := range keys {
+			if f = game.GetFilter(key); f == nil {
+				Ret400(
+					c,
+					0,
+					fmt.Errorf(
+						"filter with name '%s' does not recognized",
+						key,
+					),
+				)
+				return
+			}
+
+			flist = append(flist, f)
+		}
+
+		fexclist = append(fexclist, flist)
+	}
+
+	permissions, err := GetGamePermissionMap(arg.CID)
+
+	if err != nil {
+		Ret500(c, 0, err)
+		return
+	}
+
+	gamelist := make([]*game.GameInfo, 0)
+
+	for _, gi := range game.InfoMap {
+		if !game.Passes(gi, finclist, fexclist) {
+			continue
+		}
+
+		gameID := util.ToID(gi.Prov + "/" + gi.Name)
+
+		if !permissions[gameID] {
+			continue
+		}
+
+		gamelist = append(gamelist, gi)
+	}
+
+	sort.Slice(gamelist, func(i, j int) bool {
+		gii := gamelist[i]
+		gij := gamelist[j]
+
+		if arg.Sort {
+			if gii.Prov == gij.Prov {
+				return gii.Name < gij.Name
+			}
+
+			return gii.Prov < gij.Prov
+		}
+
+		if gii.Name == gij.Name {
+			return gii.Prov < gij.Prov
+		}
+
+		return gii.Name < gij.Name
+	})
+
+	ret.List = make([]gin.H, 0, len(gamelist))
+
+	for _, gi := range gamelist {
+		gameID := util.ToID(gi.Prov + "/" + gi.Name)
+
+		ret.List = append(ret.List, gin.H{
+			"game_id": gameID,
+			"prov":    gi.Prov,
+			"name":    gi.Name,
+			"lnum":    gi.LNum,
+			"date":    gi.Date,
+			"gt":      gi.GT,
+			"gp":      gi.GP,
+			"sx":      gi.SX,
+			"sy":      gi.SY,
+			"sn":      gi.SN,
+			"ln":      gi.LN,
+			"wn":      gi.WN,
+			"bn":      gi.BN,
+			"rtp":     gi.RTP,
+		})
+	}
+
+	RetOk(c, ret)
+}
+
 var (
 	SpinBuf util.SqlBuf[Spinlog]
 	MultBuf util.SqlBuf[Multlog]
