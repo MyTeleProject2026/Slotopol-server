@@ -21,7 +21,6 @@ func init() {
 		data, _ := embeddedYAML.ReadFile(path)
 		content := string(data)
 
-		// Find the first non‑empty, non‑comment line
 		var firstLine string
 		for _, line := range strings.Split(content, "\n") {
 			trimmed := strings.TrimSpace(line)
@@ -32,7 +31,6 @@ func init() {
 			break
 		}
 
-		// Only keep reel definition files (first line ends with "/rmap")
 		if !strings.HasSuffix(firstLine, "/rmap") {
 			return nil
 		}
