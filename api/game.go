@@ -99,11 +99,10 @@ func ApiGameList(c *gin.Context) {
 		}
 	})
 
-	// =================== PERMISSION CHECK ===================
+	// Permission check
 	enabledSet := make(map[string]bool)
 
 	if arg.CID != 0 {
-		// Auto-create table if missing
 		_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS club_game_permissions (
 			club_id BIGINT UNSIGNED NOT NULL,
 			game_alias VARCHAR(128) NOT NULL,
@@ -122,12 +121,9 @@ func ApiGameList(c *gin.Context) {
 			}
 		}
 	}
-	// ========================================================
 
-	// Build the custom response list with "enabled" field
 	var responseList []gin.H
 	for _, gi := range gamelist {
-		// ✅ USE THE SAME FORMAT AS THE DATABASE (with spaces)
 		alias := gi.Prov + " / " + gi.Name
 		responseList = append(responseList, gin.H{
 			"prov":    gi.Prov,
@@ -143,7 +139,7 @@ func ApiGameList(c *gin.Context) {
 			"wn":      gi.WN,
 			"bn":      gi.BN,
 			"rtp":     gi.RTP,
-			"enabled": enabledSet[alias], // now matches DB
+			"enabled": enabledSet[alias],
 		})
 	}
 
