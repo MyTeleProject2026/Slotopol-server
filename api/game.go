@@ -100,7 +100,6 @@ func ApiGameList(c *gin.Context) {
 	})
 
 	// =================== PERMISSION CHECK ===================
-	// Load enabled game aliases for the requested club (if CID provided)
 	enabledSet := make(map[string]bool)
 
 	if arg.CID != 0 {
@@ -116,9 +115,7 @@ func ApiGameList(c *gin.Context) {
 		if err := XormStorage.Table("club_game_permissions").
 			Where("club_id=? AND enabled=1", arg.CID).
 			Select("game_alias").Find(&enabled); err != nil {
-			// If error occurs (e.g., table missing), we simply return all games as disabled.
-			// Better to not break the API.
-			enabledSet = map[string]bool{} // empty
+			enabledSet = map[string]bool{}
 		} else {
 			for _, alias := range enabled {
 				enabledSet[alias] = true
@@ -145,7 +142,6 @@ func ApiGameList(c *gin.Context) {
 			"wn":      gi.WN,
 			"bn":      gi.BN,
 			"rtp":     gi.RTP,
-			"aliases": gi.Aliases,
 			"enabled": enabledSet[alias],
 		})
 	}
