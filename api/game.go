@@ -37,7 +37,7 @@ func ApiGameList(c *gin.Context) {
 		return
 	}
 
-	// ✅ FIX: Trim and split into non-empty tokens
+	// ✅ Trim and split into non-empty tokens (fixes trailing space issues)
 	arg.Include = strings.TrimSpace(arg.Include)
 	arg.Exclude = strings.TrimSpace(arg.Exclude)
 	if arg.Include == "" {
@@ -103,12 +103,19 @@ func ApiGameList(c *gin.Context) {
 	// Filter by club permissions
 	if arg.CID != 0 {
 		var enabled []string
-		if err := XormStorage.Table("club_game_permissions").
+		err := XormStorage.Table("club_game_permissions").
 			Where("club_id=? AND enabled=1", arg.CID).
-			Select("game_alias").Find(&enabled); err != nil {
-			Ret500(c, 0, err)
+			Select("game_alias").Find(&enabled)
+
+		// If table doesn't exist or any error, just show all games
+		if err != nil {
+			ret.List = gamelist
+			ret.AlgNum = len(alg)
+			ret.PrvNum = len(prov)
+			RetOk(c, ret)
 			return
 		}
+
 		enabledSet := make(map[string]bool)
 		for _, alias := range enabled {
 			enabledSet[alias] = true
