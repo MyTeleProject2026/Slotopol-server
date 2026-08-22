@@ -36,11 +36,15 @@ func ApiGameList(c *gin.Context) {
 		Ret400(c, 0, err)
 		return
 	}
-	if len(arg.Include) == 0 {
+
+	// ✅ FIX: Trim and split into non-empty tokens
+	arg.Include = strings.TrimSpace(arg.Include)
+	arg.Exclude = strings.TrimSpace(arg.Exclude)
+	if arg.Include == "" {
 		arg.Include = "all"
 	}
-	var include = strings.Split(arg.Include, " ")
-	var exclude = strings.Split(arg.Exclude, " ")
+	var include = strings.Fields(arg.Include)
+	var exclude = strings.Fields(arg.Exclude)
 
 	var finclist, fexclist [][]game.Filter
 	var f game.Filter
@@ -65,6 +69,7 @@ func ApiGameList(c *gin.Context) {
 				Ret400(c, 0, fmt.Errorf("filter with name '%s' does not recognized", key))
 				return
 			}
+			flist = append(flist, f)
 		}
 		fexclist = append(fexclist, flist)
 	}
