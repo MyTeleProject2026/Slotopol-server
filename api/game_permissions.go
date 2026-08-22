@@ -12,6 +12,7 @@ type ClubGamePermission struct {
 	Enabled   bool   `xorm:"enabled" json:"enabled" yaml:"enabled" xml:"enabled"`
 }
 
+// ApiGamePermissionSet – Enable or disable a game for a specific club
 func ApiGamePermissionSet(c *gin.Context) {
 	var arg struct {
 		XMLName   xml.Name `json:"-" yaml:"-" xml:"arg"`
@@ -29,7 +30,7 @@ func ApiGamePermissionSet(c *gin.Context) {
 		return
 	}
 
-	// ✅ AUTO‑CREATE TABLE IF MISSING (so you never need to run SQL!)
+	// Auto‑create the table if it doesn't exist
 	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS club_game_permissions (
 		club_id BIGINT UNSIGNED NOT NULL,
 		game_alias VARCHAR(128) NOT NULL,
@@ -43,9 +44,9 @@ func ApiGamePermissionSet(c *gin.Context) {
 		Enabled:   arg.Enabled,
 	}
 
+	// Try insert; if fails, update
 	_, err := XormStorage.InsertOne(&perm)
 	if err != nil {
-		// Already exists → update
 		if _, err2 := XormStorage.Where("club_id=? AND game_alias=?", arg.ClubID, arg.GameAlias).
 			Cols("enabled").Update(&perm); err2 != nil {
 			Ret500(c, 0, err2)
