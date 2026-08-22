@@ -23,6 +23,19 @@ type Allocation struct {
 
 // ApiAllocationCreate – Request a new allocation (status = PENDING)
 func ApiAllocationCreate(c *gin.Context) {
+	// ✅ Auto-create table if missing
+	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS allocation (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		transaction_id VARCHAR(64) NOT NULL UNIQUE,
+		club_id BIGINT UNSIGNED NOT NULL,
+		amount DECIMAL(15,2) NOT NULL,
+		type ENUM('ALLOCATE','REVERSE','ADJUSTMENT') NOT NULL,
+		status ENUM('PENDING','APPROVED','REJECTED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		approved_at TIMESTAMP NULL DEFAULT NULL,
+		note TEXT
+	)`)
+
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
 		ClubID  uint64   `json:"club_id" yaml:"club_id" xml:"club_id" binding:"required"`
@@ -60,6 +73,18 @@ func ApiAllocationCreate(c *gin.Context) {
 
 // ApiAllocationApprove – Approve a pending allocation (updates club bank)
 func ApiAllocationApprove(c *gin.Context) {
+	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS allocation (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		transaction_id VARCHAR(64) NOT NULL UNIQUE,
+		club_id BIGINT UNSIGNED NOT NULL,
+		amount DECIMAL(15,2) NOT NULL,
+		type ENUM('ALLOCATE','REVERSE','ADJUSTMENT') NOT NULL,
+		status ENUM('PENDING','APPROVED','REJECTED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		approved_at TIMESTAMP NULL DEFAULT NULL,
+		note TEXT
+	)`)
+
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
 		ID      uint64   `json:"id" yaml:"id" xml:"id" binding:"required"`
@@ -85,7 +110,6 @@ func ApiAllocationApprove(c *gin.Context) {
 	now := time.Now()
 	alloc.Status = "APPROVED"
 	alloc.ApprovedAt = &now
-
 	session := XormStorage.NewSession()
 	defer session.Close()
 	if err := session.Begin(); err != nil {
@@ -97,7 +121,6 @@ func ApiAllocationApprove(c *gin.Context) {
 		Ret500(c, 0, err)
 		return
 	}
-	// Increase club bank
 	if _, err := session.Exec("UPDATE club SET bank=bank+? WHERE cid=?", alloc.Amount, alloc.ClubID); err != nil {
 		session.Rollback()
 		Ret500(c, 0, err)
@@ -112,6 +135,18 @@ func ApiAllocationApprove(c *gin.Context) {
 
 // ApiAllocationList – List all allocations (requires admin)
 func ApiAllocationList(c *gin.Context) {
+	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS allocation (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		transaction_id VARCHAR(64) NOT NULL UNIQUE,
+		club_id BIGINT UNSIGNED NOT NULL,
+		amount DECIMAL(15,2) NOT NULL,
+		type ENUM('ALLOCATE','REVERSE','ADJUSTMENT') NOT NULL,
+		status ENUM('PENDING','APPROVED','REJECTED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		approved_at TIMESTAMP NULL DEFAULT NULL,
+		note TEXT
+	)`)
+
 	admin, al := MustAdmin(c, 0)
 	if admin == nil || al&ALadmin == 0 {
 		Ret403(c, 0, ErrNoAccess)
