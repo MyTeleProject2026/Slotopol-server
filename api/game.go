@@ -180,12 +180,14 @@ var (
 func ApiGameNew(c *gin.Context) {
 	var err error
 	var ok bool
+
 	var arg struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"arg"`
 		CID     uint64   `json:"cid" yaml:"cid" xml:"cid,attr" form:"cid" binding:"required"`
 		UID     uint64   `json:"uid" yaml:"uid" xml:"uid,attr" form:"uid" binding:"required"`
 		Alias   string   `json:"alias" yaml:"alias" xml:"alias" form:"alias" binding:"required"`
 	}
+
 	var ret struct {
 		XMLName xml.Name `json:"-" yaml:"-" xml:"ret"`
 		GID     uint64   `json:"gid" yaml:"gid" xml:"gid,attr"`
@@ -199,40 +201,62 @@ func ApiGameNew(c *gin.Context) {
 	}
 
 	var club *Club
+
 	if club, ok = Clubs.Get(arg.CID); !ok {
 		Ret404(c, 0, ErrNoClub)
 		return
 	}
+
 	_ = club
 
 	var user *User
+
 	if user, ok = Users.Get(arg.UID); !ok {
 		Ret404(c, 0, ErrNoUser)
 		return
 	}
 
-	var admin, al = MustAdmin(c, arg.CID)
-	if (al&ALmember == 0) || (admin != user && al&ALdealer == 0) {
+	admin, al := MustAdmin(c, arg.CID)
+
+	if (al&ALmember == 0) ||
+		(admin != user && al&ALdealer == 0) {
 		Ret403(c, 0, ErrNoAccess)
 		return
 	}
 
-	var scene *Scene
-	var alias = util.ToID(arg.Alias)
-	var maker, has = game.GameFactory[alias]
-	if !has {
+	gameID := util.ToID(arg.Alias)
+
+	maker, exists := game.GameFactory[gameID]
+
+	if !exists {
 		Ret400(c, 0, ErrNoAliase)
 		return
 	}
 
-	var anygame = maker()
-	var gid = StoryCounter.Inc()
-	scene = &Scene{
+	// ============================================================
+	// CLUB GAME PERMISSION CHECK
+	// ============================================================
+	//
+	// No permission record = game disabled.
+	//
+	// This prevents a club/player from bypassing the frontend and
+	// directly creating a session for a disabled game.
+	// ============================================================
+
+	if !RequireGameEnabledForClub(c, arg.CID, gameID) {
+		return
+	}
+
+	anygame := maker()
+
+	gid := StoryCounter.Inc()
+
+	scene := &Scene{
 		Story: Story{
 			GID:   gid,
 			CID:   arg.CID,
 			UID:   arg.UID,
-			Alias: alias,
+			Alias: gameID,
 		},
 		Game: anygame,
 	}
@@ -252,6 +276,7 @@ func ApiGameNew(c *gin.Context) {
 
 	RetOk(c, ret)
 }
+
 
 func ApiGameJoin(c *gin.Context) {
 	var err error
