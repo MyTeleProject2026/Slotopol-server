@@ -5,7 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"os" // for CORS
+	"os"
 	"runtime"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +20,12 @@ type Session = xorm.Session
 var XormStorage *xorm.Engine
 var XormSpinlog *xorm.Engine
 
-var serverhdr = fmt.Sprintf("slotopol/%s (%s; %s)", config.BuildVers, runtime.GOOS, runtime.GOARCH)
+var serverhdr = fmt.Sprintf(
+	"slotopol/%s (%s; %s)",
+	config.BuildVers,
+	runtime.GOOS,
+	runtime.GOARCH,
+)
 
 var Offered = []string{
 	binding.MIMEJSON,
@@ -31,18 +36,24 @@ var Offered = []string{
 
 func Negotiate(c *gin.Context, code int, data any) {
 	c.Writer.Header().Add("Server", serverhdr)
+
 	switch c.NegotiateFormat(Offered...) {
 	case binding.MIMEJSON:
 		c.JSON(code, data)
+
 	case binding.MIMEXML:
 		c.XML(code, data)
+
 	case binding.MIMEYAML:
 		c.YAML(code, data)
+
 	case binding.MIMETOML:
 		c.TOML(code, data)
+
 	default:
 		c.JSON(code, data)
 	}
+
 	c.Abort()
 }
 
@@ -59,12 +70,22 @@ type jerr struct {
 	error
 }
 
-func (err jerr) Unwrap() error { return err.error }
+func (err jerr) Unwrap() error {
+	return err.error
+}
+
 func (err jerr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(err.Error())
 }
-func (err jerr) MarshalYAML() (any, error) { return err.Error(), nil }
-func (err jerr) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+
+func (err jerr) MarshalYAML() (any, error) {
+	return err.Error(), nil
+}
+
+func (err jerr) MarshalXML(
+	e *xml.Encoder,
+	start xml.StartElement,
+) error {
 	return e.EncodeElement(err.Error(), start)
 }
 
@@ -76,51 +97,103 @@ type ajaxerr struct {
 }
 
 func (err ajaxerr) Error() string {
-	return fmt.Sprintf("what: %s, code: %d", err.What, err.Code)
+	return fmt.Sprintf(
+		"what: %s, code: %d",
+		err.What,
+		err.Code,
+	)
 }
 
-func (err ajaxerr) Unwrap() error { return err.What.error }
+func (err ajaxerr) Unwrap() error {
+	return err.What.error
+}
 
-func RetErr(c *gin.Context, status, code int, err error) {
+func RetErr(
+	c *gin.Context,
+	status,
+	code int,
+	err error,
+) {
 	var uid uint64
+
 	if uv, ok := c.Get(userKey); ok {
 		uid = uv.(*User).UID
 	}
-	Negotiate(c, status, ajaxerr{
-		What: jerr{err},
-		Code: code,
-		UID:  uid,
-	})
+
+	Negotiate(
+		c,
+		status,
+		ajaxerr{
+			What: jerr{err},
+			Code: code,
+			UID:  uid,
+		},
+	)
 }
 
-func Ret400(c *gin.Context, code int, err error) { RetErr(c, http.StatusBadRequest, code, err) }
+func Ret400(c *gin.Context, code int, err error) {
+	RetErr(c, http.StatusBadRequest, code, err)
+}
+
 func Ret401(c *gin.Context, code int, err error) {
-	c.Writer.Header().Add("WWW-Authenticate", realmBasic)
-	c.Writer.Header().Add("WWW-Authenticate", realmBearer)
+	c.Writer.Header().Add(
+		"WWW-Authenticate",
+		realmBasic,
+	)
+
+	c.Writer.Header().Add(
+		"WWW-Authenticate",
+		realmBearer,
+	)
+
 	RetErr(c, http.StatusUnauthorized, code, err)
 }
-func Ret403(c *gin.Context, code int, err error) { RetErr(c, http.StatusForbidden, code, err) }
-func Ret404(c *gin.Context, code int, err error) { RetErr(c, http.StatusNotFound, code, err) }
-func Ret500(c *gin.Context, code int, err error) { RetErr(c, http.StatusInternalServerError, code, err) }
 
-// CorsMiddleware adds CORS headers.
-func CorsMiddleware(allowedOrigin string) gin.HandlerFunc {
+func Ret403(c *gin.Context, code int, err error) {
+	RetErr(c, http.StatusForbidden, code, err)
+}
+
+func Ret404(c *gin.Context, code int, err error) {
+	RetErr(c, http.StatusNotFound, code, err)
+}
+
+func Ret500(c *gin.Context, code int, err error) {
+	RetErr(c, http.StatusInternalServerError, code, err)
+}
+
+func CorsMiddleware(
+	allowedOrigin string,
+) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if allowedOrigin != "" {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+			c.Writer.Header().Set(
+				"Access-Control-Allow-Origin",
+				allowedOrigin,
+			)
 		}
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+
+		c.Writer.Header().Set(
+			"Access-Control-Allow-Methods",
+			"GET, POST, PUT, DELETE, OPTIONS",
+		)
+
+		c.Writer.Header().Set(
+			"Access-Control-Allow-Headers",
+			"Origin, Content-Type, Authorization",
+		)
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
+
 		c.Next()
 	}
 }
 
 func SetupRouter(r *gin.Engine) {
 	adminOrigin := os.Getenv("SLOTOPOL_ADMIN_ORIGIN")
+
 	r.Use(CorsMiddleware(adminOrigin))
 
 	r.NoRoute(Handle404)
@@ -132,54 +205,115 @@ func SetupRouter(r *gin.Engine) {
 	r.GET("/diskusage", ApiDiskUsage)
 
 	// Authorization
+
 	r.Any("/signis", ApiSignis)
+
 	r.GET("/sendcode", ApiSendCode)
-	r.GET("/activate", Auth(false), ApiActivate)
-	r.POST("/signup", Auth(false), ApiSignup)
+
+	r.GET(
+		"/activate",
+		Auth(false),
+		ApiActivate,
+	)
+
+	r.POST(
+		"/signup",
+		Auth(false),
+		ApiSignup,
+	)
+
 	r.POST("/signin", ApiSignin)
-	r.Any("/refresh", Auth(true), ApiRefresh)
 
-	var ra = r.Group("/", Auth(true))
+	r.Any(
+		"/refresh",
+		Auth(true),
+		ApiRefresh,
+	)
 
-	// Common game group
+	// Public/common game information.
+
 	r.GET("/game/algs", ApiGameAlgs)
-	r.GET("/game/list", ApiGameList) // ← CRITICAL
-	var rg = ra.Group("/game")
+
+	// Admin/all-games list.
+	//
+	// With cid:
+	// returns all games plus enabled state for that club.
+	r.GET("/game/list", ApiGameList)
+
+	// Authenticated API group.
+
+	ra := r.Group("/", Auth(true))
+
+	// ============================================================
+	// CLUB GAME DISCOVERY
+	// ============================================================
+
+	// Returns only games enabled for the requested club.
+	ra.GET("/club/games", ApiClubGameList)
+
+	// ============================================================
+	// GAME GROUP
+	// ============================================================
+
+	rg := ra.Group("/game")
+
 	rg.POST("/new", ApiGameNew)
 	rg.POST("/join", ApiGameJoin)
 	rg.POST("/info", ApiGameInfo)
 	rg.POST("/rtp/get", ApiGameRtpGet)
 
-	// Slot group
-	var rs = ra.Group("/slot")
+	// ============================================================
+	// SLOT GROUP
+	// ============================================================
+
+	rs := ra.Group("/slot")
+
 	rs.POST("/bet/get", ApiSlotBetGet)
 	rs.POST("/bet/set", ApiSlotBetSet)
+
 	rs.POST("/sel/get", ApiSlotSelGet)
 	rs.POST("/sel/set", ApiSlotSelSet)
+
 	rs.POST("/mode/set", ApiSlotModeSet)
+
 	rs.POST("/spin", ApiSlotSpin)
 	rs.POST("/doubleup", ApiSlotDoubleup)
 	rs.POST("/collect", ApiSlotCollect)
 
-	// Properties group
-	var rp = ra.Group("/prop")
+	// ============================================================
+	// PROPERTIES
+	// ============================================================
+
+	rp := ra.Group("/prop")
+
 	rp.POST("/get", ApiPropsGet)
+
 	rp.POST("/wallet/get", ApiPropsWalletGet)
 	rp.POST("/wallet/add", ApiPropsWalletAdd)
+
 	rp.POST("/al/get", ApiPropsAlGet)
 	rp.POST("/al/set", ApiPropsAlSet)
+
 	rp.POST("/rtp/get", ApiPropsRtpGet)
 	rp.POST("/rtp/set", ApiPropsRtpSet)
 
-	// User group
-	var ru = ra.Group("/user")
+	// ============================================================
+	// USERS
+	// ============================================================
+
+	ru := ra.Group("/user")
+
 	ru.POST("/is", ApiUserIs)
 	ru.POST("/rename", ApiUserRename)
 	ru.POST("/secret", ApiUserSecret)
 	ru.POST("/delete", ApiUserDelete)
 
-	// Club group
-	var rc = ra.Group("/club")
+	// ============================================================
+	// CLUBS
+	// ============================================================
+
+	rc := ra.Group("/club")
+
 	rc.POST("/list", ApiClubList)
 	rc.POST("/is", ApiClubIs)
 	rc.POST("/info", ApiClubInfo)
@@ -187,15 +321,46 @@ func SetupRouter(r *gin.Engine) {
 	rc.POST("/rename", ApiClubRename)
 	rc.POST("/cashin", ApiClubCashin)
 
-	// Cloudinary group
-	var rcloud = ra.Group("/cloudinary")
+	// ============================================================
+	// CLOUDINARY
+	// ============================================================
+
+	rcloud := ra.Group("/cloudinary")
+
 	rcloud.POST("/upload", ApiUploadImage)
 	rcloud.GET("/images", ApiGetImages)
 	rcloud.DELETE("/image", ApiDeleteImage)
 
-	// Admin endpoints
-	ra.POST("/admin/allocate", ApiAllocationCreate)
-	ra.POST("/admin/allocation/approve", ApiAllocationApprove)
-	ra.GET("/admin/allocations", ApiAllocationList)
-	ra.POST("/admin/game/permission", ApiGamePermissionSet)
+	// ============================================================
+	// PLATFORM ADMIN
+	// ============================================================
+
+	ra.POST(
+		"/admin/allocate",
+		ApiAllocationCreate,
+	)
+
+	ra.POST(
+		"/admin/allocation/approve",
+		ApiAllocationApprove,
+	)
+
+	ra.GET(
+		"/admin/allocations",
+		ApiAllocationList,
+	)
+
+	// Single game permission.
+
+	ra.POST(
+		"/admin/game/permission",
+		ApiGamePermissionSet,
+	)
+
+	// Bulk game permission.
+
+	ra.POST(
+		"/admin/game/permissions/bulk",
+		ApiGamePermissionsBulkSet,
+	)
 }
