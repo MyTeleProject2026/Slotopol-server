@@ -26,10 +26,10 @@ func ApiGameList(c *gin.Context) {
 		CID     uint64   `json:"cid" yaml:"cid" xml:"cid" form:"cid"`
 	}
 	var ret struct {
-		XMLName xml.Name         `json:"-" yaml:"-" xml:"ret"`
-		List    []*game.GameInfo `json:"list" yaml:"list" xml:"list>gi"`
-		AlgNum  int              `json:"algnum" yaml:"algnum" xml:"algnum"`
-		PrvNum  int              `json:"prvnum" yaml:"prvnum" xml:"prvnum"`
+		XMLName xml.Name `json:"-" yaml:"-" xml:"ret"`
+		List    []gin.H  `json:"list" yaml:"list" xml:"list>gi"`
+		AlgNum  int      `json:"algnum" yaml:"algnum" xml:"algnum"`
+		PrvNum  int      `json:"prvnum" yaml:"prvnum" xml:"prvnum"`
 	}
 
 	if err = c.ShouldBind(&arg); err != nil {
@@ -99,10 +99,58 @@ func ApiGameList(c *gin.Context) {
 		}
 	})
 
-	// ✅ ALWAYS RETURN ALL GAMES - NO CLUB PERMISSION FILTERING
-	// (This fixes the "context deadline exceeded" and "No games found" errors)
+	// =================== PERMISSION CHECK ===================
+	// Load enabled game aliases for the requested club (if CID provided)
+	enabledSet := make(map[string]bool)
 
-	ret.List = gamelist
+	if arg.CID != 0 {
+		// Auto-create table if missing (prevents 500 errors)
+		_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS club_game_permissions (
+			club_id BIGINT UNSIGNED NOT NULL,
+			game_alias VARCHAR(128) NOT NULL,
+			enabled BOOLEAN NOT NULL DEFAULT TRUE,
+			PRIMARY KEY (club_id, game_alias)
+		)`)
+
+		var enabled []string
+		if err := XormStorage.Table("club_game_permissions").
+			Where("club_id=? AND enabled=1", arg.CID).
+			Select("game_alias").Find(&enabled); err != nil {
+			// If error occurs (e.g., table missing), we simply return all games as disabled.
+			// Better to not break the API.
+			enabledSet = map[string]bool{} // empty
+		} else {
+			for _, alias := range enabled {
+				enabledSet[alias] = true
+			}
+		}
+	}
+	// ========================================================
+
+	// Build the custom response list with "enabled" field
+	var responseList []gin.H
+	for _, gi := range gamelist {
+		alias := gi.GameAlias.ID()
+		responseList = append(responseList, gin.H{
+			"prov":    gi.Prov,
+			"name":    gi.Name,
+			"lnum":    gi.LNum,
+			"date":    gi.Date,
+			"gt":      gi.GT,
+			"gp":      gi.GP,
+			"sx":      gi.SX,
+			"sy":      gi.SY,
+			"sn":      gi.SN,
+			"ln":      gi.LN,
+			"wn":      gi.WN,
+			"bn":      gi.BN,
+			"rtp":     gi.RTP,
+			"aliases": gi.Aliases,
+			"enabled": enabledSet[alias],
+		})
+	}
+
+	ret.List = responseList
 	ret.AlgNum = len(alg)
 	ret.PrvNum = len(prov)
 
