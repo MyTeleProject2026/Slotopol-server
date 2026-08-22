@@ -29,7 +29,7 @@ func ApiGamePermissionSet(c *gin.Context) {
 		return
 	}
 
-	// ✅ PLURAL TABLE NAME (matches database)
+	// ✅ PLURAL TABLE NAME (matches your database)
 	_, _ = XormStorage.Exec(`CREATE TABLE IF NOT EXISTS club_game_permissions (
 		club_id BIGINT UNSIGNED NOT NULL,
 		game_alias VARCHAR(128) NOT NULL,
@@ -43,7 +43,6 @@ func ApiGamePermissionSet(c *gin.Context) {
 		Enabled:   arg.Enabled,
 	}
 
-	// ✅ Try to update first (PLURAL)
 	updated, err := XormStorage.Where("club_id=? AND game_alias=?", arg.ClubID, arg.GameAlias).
 		Cols("enabled").
 		Update(&perm)
@@ -53,7 +52,6 @@ func ApiGamePermissionSet(c *gin.Context) {
 		return
 	}
 
-	// ✅ If no rows updated, insert (PLURAL)
 	if updated == 0 {
 		_, err = XormStorage.InsertOne(&perm)
 		if err != nil {
