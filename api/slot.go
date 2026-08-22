@@ -34,6 +34,7 @@ func ApiSlotBetGet(c *gin.Context) {
 		Ret404(c, 0, err)
 		return
 	}
+	
 	var game slot.SlotGame
 	if game, ok = scene.Game.(slot.SlotGame); !ok {
 		Ret403(c, 0, ErrNotSlot)
@@ -240,6 +241,10 @@ func ApiSlotSpin(c *gin.Context) {
 		Ret404(c, 0, err)
 		return
 	}
+	if !RequireSceneGameEnabled(c, scene) {
+	    return
+    }
+	
 	var game slot.SlotGeneric
 	if game, ok = scene.Game.(slot.SlotGeneric); !ok {
 		Ret403(c, 0, ErrNotSlot)
@@ -411,6 +416,9 @@ func ApiSlotDoubleup(c *gin.Context) {
 		Ret404(c, 0, err)
 		return
 	}
+	if !RequireSceneGameEnabled(c, scene) {
+	    return
+    }
 	var game slot.SlotGame
 	if game, ok = scene.Game.(slot.SlotGame); !ok {
 		Ret403(c, 0, ErrNotSlot)
@@ -528,6 +536,9 @@ func ApiSlotCollect(c *gin.Context) {
 		Ret404(c, 0, err)
 		return
 	}
+	if !RequireSceneGameEnabled(c, scene) {
+	    return
+    }
 	var game slot.SlotGame
 	if game, ok = scene.Game.(slot.SlotGame); !ok {
 		Ret403(c, 0, ErrNotSlot)
