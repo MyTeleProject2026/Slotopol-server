@@ -69,6 +69,10 @@ var webCmd = &cobra.Command{
 		r.SetTrustedProxies(Cfg.TrustedProxies)
 		r.HandleMethodNotAllowed = true
 		api.SetupRouter(r)
+		// Country/currency profiles and club provider-credit APIs are
+		// registered after the core routes so existing API contracts remain
+		// unchanged while the new club configuration surface is available.
+		api.RegisterClubConfigurationRoutes(r)
 
 		// Starts HTTP listeners
 		var wg errgroup.Group
