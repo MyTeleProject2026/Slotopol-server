@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: slotopol-server
+    runtime: image
+    repo: https://github.com/MyTeleProject2026/Slotopol-server
+    plan: starter
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: SLOTOPOL_DBDRIVER
+        value: mysql
+      - key: SLOTOPOL_CLUBDSN
+        sync: false
+      - key: SLOTOPOL_SPINDSN
+        sync: false
+      - key: SLOTOPOL_ACCESS_KEY
+        generateValue: true
+      - key: SLOTOPOL_REFRESH_KEY
+        generateValue: true
+      - key: SLOTOPOL_CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: SLOTOPOL_CLOUDINARY_API_KEY
+        sync: false
+      - key: SLOTOPOL_CLOUDINARY_API_SECRET
+        sync: false

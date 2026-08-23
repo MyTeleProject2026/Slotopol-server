@@ -1,0 +1,61 @@
+# ============================================================
+# Slotopol Server with MySQL and Cloudinary
+# ============================================================
+
+services:
+
+  slotopol:
+    # CHANGE: Use your locally built image instead of a public old one
+    image: slotopol-server:latest 
+    container_name: slotopol-srv
+    depends_on:
+      - database
+    ports:
+      - ${SLOTOPOL_PORT:-8080}:8080
+    networks:
+      slotopol-net:
+        aliases:
+          - slotopolhost
+    environment:
+      SLOTOPOL_DBDRIVER: ${SLOTOPOL_DBDRIVER:-mysql}
+      SLOTOPOL_CLUBDSN: ${SLOTOPOL_CLUBDSN}
+      SLOTOPOL_SPINDSN: ${SLOTOPOL_SPINDSN}
+      SLOTOPOL_ACCESS_KEY: ${SLOTOPOL_ACCESS_KEY}
+      SLOTOPOL_REFRESH_KEY: ${SLOTOPOL_REFRESH_KEY}
+      SLOTOPOL_CLOUDINARY_CLOUD_NAME: ${SLOTOPOL_CLOUDINARY_CLOUD_NAME}
+      SLOTOPOL_CLOUDINARY_API_KEY: ${SLOTOPOL_CLOUDINARY_API_KEY}
+      SLOTOPOL_CLOUDINARY_API_SECRET: ${SLOTOPOL_CLOUDINARY_API_SECRET}
+      SLOTOPOL_CLOUDINARY_UPLOAD_FOLDER: ${SLOTOPOL_CLOUDINARY_UPLOAD_FOLDER:-slotopol}
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 15s
+    volumes:
+      - ./appdata:/appdata
+      - ./uploads:/uploads
+
+  database:
+    image: mysql:8.0-debian
+    container_name: slotopol-db
+    ports:
+      - ${SLOTOPOL_DB_PORT:-3306}:3306
+    networks:
+      slotopol-net:
+        aliases:
+          - mysqlhost
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_USER: ${SLOTOPOL_DB_USER:-admin}
+      MYSQL_PASSWORD: ${SLOTOPOL_DB_PASSWORD:-password}
+      MYSQL_DATABASE: ${SLOTOPOL_DB_NAME:-slotopol}
+    volumes:
+      - slotopol_db_data:/var/lib/mysql
+      - ./appdata/slot-clubinit.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+networks:
+  slotopol-net:
+    name: slotopol-net
+    external: false
+
+volumes:
+  slotopol_db_data:

@@ -1,0 +1,28 @@
+SLOTOPOL-SERVER REPLACEMENT PACKAGE v2
+
+Replace these complete files:
+  api/routes.go
+  api/club.go
+  api/errcodes.go
+  api/keno.go          (NEW)
+  cmd/links.go
+  config/config.go
+  game/keno/keno.go
+  render.yaml
+
+Delete:
+  api/keno.txt
+
+Render:
+  Render supplies PORT automatically.
+  config/config.go now uses PORT when SLOTOPOL_PORT_HTTP is not set.
+  /ping is configured as the health check.
+
+Validation:
+  The standalone game/keno package was successfully compiled/tested with Go
+  in this environment.
+  A complete repository-wide `go test ./...` was NOT possible here because
+  the repository requires Go 1.25.0 and the environment cannot download
+  the required Go toolchain/dependencies.
+
+This package contains complete replacement files, not code snippets.

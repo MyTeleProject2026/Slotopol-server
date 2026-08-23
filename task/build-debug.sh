@@ -1,0 +1,26 @@
+#!/bin/bash -u
+# This script compiles project for default platform with debug information.
+# It produces static C-libraries linkage.
+
+wd=$(realpath -s "$(dirname "$0")/..")
+mkdir -p "$GOPATH/bin/config" "$GOPATH/bin/sqlite"
+cp -ruv "$wd/appdata/"* "$GOPATH/bin/config"
+
+buildvers=$(git describe --tags)
+# See https://tc39.es/ecma262/#sec-date-time-string-format
+# time format acceptable for Date constructors.
+buildtime=$(date +'%FT%T.%3NZ')
+
+go env -w CGO_ENABLED=1
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+  appname="slot_debug.exe"
+else
+  appname="slot_debug"
+fi
+go build -o "$GOPATH/bin/${appname}" -v\
+ -tags="jsoniter"\
+ -buildvcs=false\
+ -ldflags="-linkmode external -extldflags -static\
+ -X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildVers=$buildvers'\
+ -X 'github.com/MyTeleProject2026/Slotopol-server/config.BuildTime=$buildtime'"\
+ $wd

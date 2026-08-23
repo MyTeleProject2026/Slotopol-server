@@ -1,0 +1,31 @@
+name: Fix go.sum
+
+on:
+  workflow_dispatch:   # Allows manual trigger
+  push:
+    branches: [ "master" ]
+
+permissions:
+  contents: write    # Critical: allows the bot to push changes
+
+jobs:
+  generate-go-sum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      
+      - name: Generate go.sum
+        run: go mod tidy
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add go.sum
+          git commit -m "Add valid go.sum" || echo "No changes to commit"
+          git push
