@@ -48,7 +48,7 @@ type ajaxerr struct {
 	XMLName xml.Name `json:"-" yaml:"-" xml:"error"`
 	What jerr `json:"what" yaml:"what" xml:"what"`
 	Code int `json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty"`
-	UID uint64 `json:"uid,omitempty" yaml:"uid,omitempty" xml:"uid,omitempty,attr"`
+	UID uint64 `json:"uid,omitempty" yaml:"uid,omitempty,attr"`
 }
 func (err ajaxerr) Error() string { return fmt.Sprintf("what: %s, code: %d", err.What, err.Code) }
 func (err ajaxerr) Unwrap() error { return err.What.error }
@@ -66,7 +66,7 @@ func SetupRouter(r *gin.Engine) {
 	r.Use(CorsMiddleware(adminOrigin)); r.NoRoute(Handle404); r.NoMethod(Handle405)
 	r.Any("/ping", ApiPing); r.GET("/servinfo", ApiServInfo); r.GET("/memusage", ApiMemUsage); r.GET("/diskusage", ApiDiskUsage)
 	r.Any("/signis", ApiSignis); r.GET("/sendcode", ApiSendCode); r.GET("/activate", Auth(false), ApiActivate); r.POST("/signup", Auth(false), ApiSignup); r.POST("/signin", ApiSignin); r.Any("/refresh", Auth(true), ApiRefresh)
-	r.GET("/game/algs", ApiGameAlgs); r.GET("/game/list", ApiGameList)
+	r.GET("/game/algs", ApiGameAlgs); r.GET("/game/list", ApiGameList); r.GET("/game/capabilities/:id", ApiGameCapabilities)
 	ra := r.Group("/", Auth(true))
 	ra.GET("/club/games", ApiClubGameList)
 	rg := ra.Group("/game"); rg.POST("/new", ApiGameNew); rg.POST("/join", ApiGameJoin); rg.POST("/info", ApiGameInfo); rg.POST("/rtp/get", ApiGameRtpGet)
