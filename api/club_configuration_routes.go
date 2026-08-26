@@ -21,6 +21,10 @@ func RegisterClubConfigurationRoutes(r *gin.Engine) {
 	ra.GET("/admin/club/currency-ledger", ApiAdminClubCurrencyLedger)
 	ra.GET("/admin/club/currency-reconciliation", ApiAdminCurrencyReconciliation)
 
+	// Virtual Slotopol-server treasury: unlimited demo/provider credit is
+	// minted server-side and credited in the target club's configured country
+	// currency. No external payment rail is involved.
+	ra.POST("/admin/treasury/mint-transfer", ApiAdminVirtualTreasuryMintTransfer)
 	ra.POST("/admin/treasury/transfer-request", ApiAdminTreasuryTransferRequest)
 	ra.GET("/admin/treasury/approvals", ApiAdminTreasuryApprovalList)
 	ra.POST("/admin/treasury/approval-decision", ApiAdminTreasuryApprovalDecision)
