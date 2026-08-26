@@ -19,7 +19,6 @@ const webLong = ``
 const webExmp = `
   %[1]s web`
 
-// webCmd represents the `web` command
 var webCmd = &cobra.Command{
 	Use:     "web",
 	Short:   webShort,
@@ -42,7 +41,6 @@ var webCmd = &cobra.Command{
 
 		var exitctx = Startup()
 
-		// Load yaml-files
 		LoadInternalYaml(exitctx)
 		if err = LoadExternalYaml(exitctx); err != nil {
 			log.Fatalf("can not load external yaml files: %s", err.Error())
@@ -51,7 +49,6 @@ var webCmd = &cobra.Command{
 		UpdateAlgList()
 		CheckAlgList()
 
-		// Working with SQL
 		if err = InitSQL(); err != nil {
 			log.Fatalln(err.Error())
 			return
@@ -64,17 +61,11 @@ var webCmd = &cobra.Command{
 		}()
 		go SqlLoop(exitctx)
 
-		// Web router engine
 		var r = gin.New()
 		r.SetTrustedProxies(Cfg.TrustedProxies)
 		r.HandleMethodNotAllowed = true
 		api.SetupRouter(r)
-		// Country/currency profiles and club provider-credit APIs are
-		// registered after the core routes so existing API contracts remain
-		// unchanged while the new club configuration surface is available.
-		api.RegisterClubConfigurationRoutes(r)
 
-		// Starts HTTP listeners
 		var wg errgroup.Group
 		for _, addr := range Cfg.PortHTTP {
 			log.Printf("start http on %s\n", addr)
@@ -92,7 +83,6 @@ var webCmd = &cobra.Command{
 				var ctx, cancel = context.WithCancel(context.Background())
 				go func() {
 					defer cancel()
-					// service connections
 					if err = srv.ListenAndServe(); err != nil {
 						if err != http.ErrServerClosed {
 							err = fmt.Errorf("failed to serve on %s: %w", addr, err)
@@ -106,7 +96,6 @@ var webCmd = &cobra.Command{
 				select {
 				case <-ctx.Done():
 				case <-exitctx.Done():
-					// create a deadline to wait for.
 					var ctx, cancel = context.WithTimeout(context.Background(), Cfg.ShutdownTimeout)
 					defer cancel()
 
