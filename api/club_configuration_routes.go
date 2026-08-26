@@ -16,6 +16,7 @@ func RegisterClubConfigurationRoutes(r *gin.Engine) {
 
 	ra.GET("/admin/club/currency-balance", ApiClubCurrencyBalanceGet)
 	ra.POST("/admin/club/currency-balance/adjust", ApiClubCurrencyBalanceAdjust)
+	ra.GET("/admin/club/currency-balances", ApiAdminCurrencyOverview)
 
 	ra.GET("/admin/audit", ApiAdminAuditList)
 	ra.GET("/admin/settlement/recent", ApiAdminSettlementRecent)
