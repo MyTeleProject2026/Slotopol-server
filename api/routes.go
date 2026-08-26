@@ -71,9 +71,9 @@ func SetupRouter(r *gin.Engine) {
 	ra.GET("/club/games", ApiClubGameList)
 	rg := ra.Group("/game"); rg.POST("/new", ApiGameNew); rg.POST("/join", ApiGameJoin); rg.POST("/info", ApiGameInfo); rg.POST("/rtp/get", ApiGameRtpGet)
 	rs := ra.Group("/slot"); rs.POST("/bet/get", ApiSlotBetGet); rs.POST("/bet/set", ApiSlotBetSet); rs.POST("/sel/get", ApiSlotSelGet); rs.POST("/sel/set", ApiSlotSelSet); rs.POST("/mode/set", ApiSlotModeSet); rs.POST("/spin", ApiSlotSpin); rs.POST("/doubleup", ApiSlotDoubleup); rs.POST("/collect", ApiSlotCollect)
-	rp := ra.Group("/prop"); rp.POST("/get", ApiPropsGet); rp.POST("/wallet/get", ApiPropsWalletGet); rp.POST("/wallet/add", ApiPropsWalletAdd); rp.POST("/al/get", ApiPropsAlGet); rp.POST("/al/set", ApiPropsAlSet); rp.POST("/rtp/get", ApiPropsRtpGet); rp.POST("/rtp/set", ApiPropsRtpSet)
+	rp := ra.Group("/prop"); rp.POST("/get", ApiPropsGet); rp.POST("/wallet/get", ApiPropsWalletGet); rp.POST("/al/get", ApiPropsAlGet); rp.POST("/al/set", ApiPropsAlSet); rp.POST("/rtp/get", ApiPropsRtpGet); rp.POST("/rtp/set", ApiPropsRtpSet)
 	ru := ra.Group("/user"); ru.POST("/is", ApiUserIs); ru.POST("/phone", ApiUserPhone); ru.POST("/rename", ApiUserRename); ru.POST("/secret", ApiUserSecret); ru.POST("/delete", ApiUserDelete)
 	rc := ra.Group("/club"); rc.POST("/list", ApiClubList); rc.POST("/is", ApiClubIs); rc.POST("/info", ApiClubInfo); rc.POST("/jpfund", ApiClubJpfund); rc.POST("/rename", ApiClubRename); rc.POST("/cashin", ApiClubCashin)
-	rcloud := ra.Group("/cloudinary"); rcloud.POST("/upload", ApiUploadImage); rcloud.GET("/images", ApiGetImages); rcloud.DELETE("/image", ApiDeleteImage)
-	ra.POST("/admin/allocate", ApiAllocationCreate); ra.POST("/admin/allocation/approve", ApiAllocationApprove); ra.GET("/admin/allocations", ApiAllocationList); ra.POST("/admin/game/permission", ApiGamePermissionSet); ra.POST("/admin/game/permissions/bulk", ApiGamePermissionsBulkSet)
+	trcloud := ra.Group("/cloudinary"); rcloud.POST("/upload", ApiUploadImage); rcloud.GET("/images", ApiGetImages); rcloud.DELETE("/image", ApiDeleteImage)
+	ra.POST("/admin/allocate", ApiAllocationCreate); ra.POST("/admin/allocation/approve", ApiAllocationApprove); ra.GET("/admin/allocations", ApiAllocationList); ra.POST("/admin/game/permission", ApiAdminGamePermissionSetAudited); ra.POST("/admin/game/permissions/bulk", ApiAdminGamePermissionsBulkSetAudited)
 }
