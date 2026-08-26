@@ -74,6 +74,6 @@ func SetupRouter(r *gin.Engine) {
 	rp := ra.Group("/prop"); rp.POST("/get", ApiPropsGet); rp.POST("/wallet/get", ApiPropsWalletGet); rp.POST("/al/get", ApiPropsAlGet); rp.POST("/al/set", ApiPropsAlSet); rp.POST("/rtp/get", ApiPropsRtpGet); rp.POST("/rtp/set", ApiPropsRtpSet)
 	ru := ra.Group("/user"); ru.POST("/is", ApiUserIs); ru.POST("/phone", ApiUserPhone); ru.POST("/rename", ApiUserRename); ru.POST("/secret", ApiUserSecret); ru.POST("/delete", ApiUserDelete)
 	rc := ra.Group("/club"); rc.POST("/list", ApiClubList); rc.POST("/is", ApiClubIs); rc.POST("/info", ApiClubInfo); rc.POST("/jpfund", ApiClubJpfund); rc.POST("/rename", ApiClubRename); rc.POST("/cashin", ApiClubCashin)
-	trcloud := ra.Group("/cloudinary"); rcloud.POST("/upload", ApiUploadImage); rcloud.GET("/images", ApiGetImages); rcloud.DELETE("/image", ApiDeleteImage)
+	rcloud := ra.Group("/cloudinary"); rcloud.POST("/upload", ApiUploadImage); rcloud.GET("/images", ApiGetImages); rcloud.DELETE("/image", ApiDeleteImage)
 	ra.POST("/admin/allocate", ApiAllocationCreate); ra.POST("/admin/allocation/approve", ApiAllocationApprove); ra.GET("/admin/allocations", ApiAllocationList); ra.POST("/admin/game/permission", ApiAdminGamePermissionSetAudited); ra.POST("/admin/game/permissions/bulk", ApiAdminGamePermissionsBulkSetAudited)
 }
