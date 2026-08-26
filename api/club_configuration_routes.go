@@ -2,9 +2,9 @@ package api
 
 import "github.com/gin-gonic/gin"
 
-// RegisterClubConfigurationRoutes wires the country/currency profile,
-// provider-credit and phone-based player identity APIs into the authenticated
-// platform API. These endpoints remain separate from customer-wallet accounting.
+// RegisterClubConfigurationRoutes wires the country/currency profile and
+// provider-credit APIs into the authenticated platform API. Player phone
+// identity remains registered by SetupRouter so Gin receives each route once.
 func RegisterClubConfigurationRoutes(r *gin.Engine) {
 	ra := r.Group("/", Auth(true))
 
@@ -16,8 +16,4 @@ func RegisterClubConfigurationRoutes(r *gin.Engine) {
 
 	ra.GET("/admin/club/currency-balance", ApiClubCurrencyBalanceGet)
 	ra.POST("/admin/club/currency-balance/adjust", ApiClubCurrencyBalanceAdjust)
-
-	// N999Bet player provisioning uses phone as the authoritative identity.
-	ra.GET("/user/phone", ApiUserPhone)
-	ra.POST("/user/phone", ApiUserPhone)
 }
