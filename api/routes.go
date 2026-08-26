@@ -44,12 +44,7 @@ func (err jerr) MarshalJSON() ([]byte, error) { return json.Marshal(err.Error())
 func (err jerr) MarshalYAML() (any, error) { return err.Error(), nil }
 func (err jerr) MarshalXML(e *xml.Encoder, start xml.StartElement) error { return e.EncodeElement(err.Error(), start) }
 
-type ajaxerr struct {
-	XMLName xml.Name `json:"-" yaml:"-" xml:"error"`
-	What jerr `json:"what" yaml:"what" xml:"what"`
-	Code int `json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty"`
-	UID uint64 `json:"uid,omitempty" yaml:"uid,omitempty,attr"`
-}
+type ajaxerr struct { XMLName xml.Name `json:"-" yaml:"-" xml:"error"`; What jerr `json:"what" yaml:"what" xml:"what"`; Code int `json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty"`; UID uint64 `json:"uid,omitempty" yaml:"uid,omitempty,attr"` }
 func (err ajaxerr) Error() string { return fmt.Sprintf("what: %s, code: %d", err.What, err.Code) }
 func (err ajaxerr) Unwrap() error { return err.What.error }
 func RetErr(c *gin.Context, status, code int, err error) { var uid uint64; if uv, ok := c.Get(userKey); ok { uid = uv.(*User).UID }; Negotiate(c, status, ajaxerr{What:jerr{err}, Code:code, UID:uid}) }
@@ -75,5 +70,6 @@ func SetupRouter(r *gin.Engine) {
 	ru := ra.Group("/user"); ru.POST("/is", ApiUserIs); ru.POST("/phone", ApiUserPhone); ru.POST("/rename", ApiUserRename); ru.POST("/secret", ApiUserSecret); ru.POST("/delete", ApiUserDelete)
 	rc := ra.Group("/club"); rc.POST("/list", ApiClubList); rc.POST("/is", ApiClubIs); rc.POST("/info", ApiClubInfo); rc.POST("/jpfund", ApiClubJpfund); rc.POST("/rename", ApiClubRename); rc.POST("/cashin", ApiClubCashin)
 	rcloud := ra.Group("/cloudinary"); rcloud.POST("/upload", ApiUploadImage); rcloud.GET("/images", ApiGetImages); rcloud.DELETE("/image", ApiDeleteImage)
-	ra.POST("/admin/allocate", ApiAllocationCreate); ra.POST("/admin/allocation/approve", ApiAllocationApprove); ra.GET("/admin/allocations", ApiAllocationList); ra.POST("/admin/game/permission", ApiAdminGamePermissionSetAudited); ra.POST("/admin/game/permissions/bulk", ApiAdminGamePermissionsBulkSetAudited)
+	ra.GET("/admin/users", ApiAdminUserList)
+	ra.POST("/admin/allocate", ApiAllocationCreate); ra.POST("/admin/allocation/approve", ApiAllocationApprove); ra.POST("/admin/allocation/reject", ApiAllocationReject); ra.GET("/admin/allocations", ApiAllocationList); ra.POST("/admin/game/permission", ApiAdminGamePermissionSetAudited); ra.POST("/admin/game/permissions/bulk", ApiAdminGamePermissionsBulkSetAudited)
 }
