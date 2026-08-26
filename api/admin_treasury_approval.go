@@ -53,14 +53,40 @@ func ApiAdminTreasuryApprovalList(c *gin.Context) {
     if err:=q.Limit(250).Find(&rows); err!=nil { Ret500(c,0,err); return }; RetOk(c,gin.H{"approvals":rows})
 }
 
+// executeApprovedTreasuryTransfer atomically moves provider credit and marks the
+// approval executed in the same transaction, making retries unable to duplicate
+// the transfer once status leaves pending.
+func executeApprovedTreasuryTransfer(a *TreasuryApproval, approver uint64) error {
+    if err:=ensureClubCurrencyBalances(); err!=nil { return err }
+    if err:=ensureClubCurrencyLedger(); err!=nil { return err }
+    toAmount:=a.FromAmount*a.Rate
+    if toAmount<=0 || math.IsNaN(toAmount) || math.IsInf(toAmount,0) { return fmt.Errorf("invalid converted amount") }
+    s:=XormStorage.NewSession(); defer s.Close()
+    if err:=s.Begin(); err!=nil { return err }
+    // Claim the request only if still pending. This is the idempotency guard.
+    res,err:=s.Exec("UPDATE treasury_approvals SET status=?, approved_by=?, utime=? WHERE id=? AND status=?", "executing", approver, time.Now(), a.ID, "pending")
+    if err!=nil { _=s.Rollback(); return err }
+    n,err:=res.RowsAffected(); if err!=nil { _=s.Rollback(); return err }; if n!=1 { _=s.Rollback(); return fmt.Errorf("approval already processed") }
+    if err:=debitClubCurrencyBalance(s,a.FromClubID,a.FromCurrency,a.FromAmount); err!=nil { _=s.Rollback(); return err }
+    if err:=creditClubCurrencyBalance(s,a.ToClubID,a.ToCurrency,toAmount); err!=nil { _=s.Rollback(); return err }
+    entry:=&ClubCurrencyLedger{UID:approver,FromClubID:a.FromClubID,ToClubID:a.ToClubID,FromCurrency:a.FromCurrency,ToCurrency:a.ToCurrency,FromAmount:a.FromAmount,ToAmount:toAmount,Rate:a.Rate,Reference:a.Reference}
+    if _,err:=s.InsertOne(entry); err!=nil { _=s.Rollback(); return err }
+    if _,err:=s.Exec("UPDATE treasury_approvals SET status=?, ledger_id=?, utime=? WHERE id=? AND status=?", "executed", entry.ID, time.Now(), a.ID, "executing"); err!=nil { _=s.Rollback(); return err }
+    if err:=s.Commit(); err!=nil { return err }
+    a.Status="executed"; a.ApprovedBy=approver; a.LedgerID=entry.ID; a.UTime=time.Now()
+    return nil
+}
+
 func ApiAdminTreasuryApprovalDecision(c *gin.Context) {
     admin,al:=GetAdmin(c,0); if admin==nil || al&ALadmin==0 { Ret403(c,0,ErrNoAccess); return }
     var arg struct { ID uint64 `json:"id" binding:"required"`; Approve bool `json:"approve"`; Note string `json:"note"` }
     if err:=c.ShouldBindJSON(&arg); err!=nil { Ret400(c,0,err); return }; if err:=ensureTreasuryApprovals(); err!=nil { Ret500(c,0,err); return }
     var a TreasuryApproval; ok,err:=XormStorage.ID(arg.ID).Get(&a); if err!=nil { Ret500(c,0,err); return }; if !ok { Ret404(c,0,fmt.Errorf("approval not found")); return }
     if a.Status!="pending" { Ret400(c,0,fmt.Errorf("approval is not pending")); return }; if a.RequestedBy==admin.UID { Ret403(c,0,fmt.Errorf("requester cannot approve own transfer")); return }
-    a.ApprovedBy=admin.UID; a.DecisionNote=strings.TrimSpace(arg.Note); if !arg.Approve { a.Status="rejected"; a.UTime=time.Now(); if _,err:=XormStorage.ID(a.ID).Cols("approved_by","decision_note","status","utime").Update(&a); err!=nil { Ret500(c,0,err); return }; recordAdminAudit(c,a.FromClubID,"treasury.transfer.reject","treasury_approvals",fmt.Sprintf("id=%d",a.ID)); RetOk(c,gin.H{"approval":a}); return }
-    a.Status="approved"; a.UTime=time.Now(); if _,err:=XormStorage.ID(a.ID).Cols("approved_by","decision_note","status","utime").Update(&a); err!=nil { Ret500(c,0,err); return }
-    // Execution remains intentionally separate from approval until the transfer path consumes approved requests.
-    recordAdminAudit(c,a.FromClubID,"treasury.transfer.approve","treasury_approvals",fmt.Sprintf("id=%d reference=%s",a.ID,a.Reference)); RetOk(c,gin.H{"approval":a})
+    a.ApprovedBy=admin.UID; a.DecisionNote=strings.TrimSpace(arg.Note)
+    if !arg.Approve { a.Status="rejected"; a.UTime=time.Now(); if _,err:=XormStorage.ID(a.ID).Cols("approved_by","decision_note","status","utime").Update(&a); err!=nil { Ret500(c,0,err); return }; recordAdminAudit(c,a.FromClubID,"treasury.transfer.reject","treasury_approvals",fmt.Sprintf("id=%d",a.ID)); RetOk(c,gin.H{"approval":a}); return }
+    if err:=executeApprovedTreasuryTransfer(&a,admin.UID); err!=nil { Ret400(c,0,err); return }
+    if _,err:=XormStorage.ID(a.ID).Cols("decision_note").Update(&a); err!=nil { Ret500(c,0,err); return }
+    recordAdminAudit(c,a.FromClubID,"treasury.transfer.execute-approved","treasury_approvals",fmt.Sprintf("id=%d ledger_id=%d reference=%s",a.ID,a.LedgerID,a.Reference))
+    RetOk(c,gin.H{"approval":a})
 }
