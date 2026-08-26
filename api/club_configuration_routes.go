@@ -3,7 +3,8 @@ package api
 import "github.com/gin-gonic/gin"
 
 // RegisterClubConfigurationRoutes wires the country/currency profile,
-// provider-credit and privileged audit APIs into the authenticated platform API.
+// provider-credit, audit and settlement monitoring APIs into the
+// authenticated platform API.
 func RegisterClubConfigurationRoutes(r *gin.Engine) {
     ra := r.Group("/", Auth(true))
 
@@ -17,4 +18,5 @@ func RegisterClubConfigurationRoutes(r *gin.Engine) {
     ra.POST("/admin/club/currency-balance/adjust", ApiClubCurrencyBalanceAdjust)
 
     ra.GET("/admin/audit", ApiAdminAuditList)
+    ra.GET("/admin/settlement/recent", ApiAdminSettlementRecent)
 }
